@@ -46,8 +46,6 @@ class Network():
     def activation_relu(input:float)->float:
         if input<0:
             output=0
-        elif input>1:
-            output=1
         else:
             output=input
         return output
@@ -55,6 +53,19 @@ class Network():
     @staticmethod
     def calculate_error(predicted:int, actual:int):
         return predicted-actual
+
+    @staticmethod
+    def normalize_list(listFrom:[])->[]:
+        layer_min:float=0
+        layer_max:float=0
+        list_to:[]=[]
+        for layer in listFrom:
+            if layer>layer_max:
+                layer_max=layer
+            elif layer<layer_min:
+                layer_min=layer
+
+
 
     def back_propagate(self, weight_keys:[], error:int):
         adjusted_error:float=self.learning_rate*float(error)
@@ -66,12 +77,18 @@ class Network():
     def forward_propagate(self, input_data:list[float], expected_result:int, is_training:bool=True):
         weights_used:list=[]
         current_layer:list[float]=[]
-        for i in range(0,self.layer_size):
-            current_layer.append(0)
+        layer_cache:list[float]
         k=0
         while k<=self.layer_count:
             i=0
-            while i < len(input_data):
+            current_layer=[]
+            for i in range(0,self.layer_size):
+                current_layer.append(0)
+            if k==0:
+                layer_size=len(input_data)
+            else:
+                layer_size=self.layer_size
+            while i < layer_size:
                 j=0
                 if(i!=len(input_data)-1):
                     output_size:int=self.layer_size
@@ -89,7 +106,9 @@ class Network():
                     if current_layer[j]>0:
                         weights_used.append((fromNodeId, toNodeId, layerId))
                     j+=1
-                input_data=current_layer
+                # normalize 
+                layer_cache=self.normalize_list(current_layer)
+
                 i+=1
             k+=1
         result:int=current_layer.index(max(current_layer))
