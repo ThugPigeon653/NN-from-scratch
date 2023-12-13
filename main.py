@@ -1,6 +1,8 @@
 import sqlite3
 import random
 import uuid
+import sys
+from input_data import DataManager
 
 class Network():
     def __init__(self, layer_count:int, layer_size:int, input_size:int, output_size:int, activation_type:int, learning_rate:float) -> None:
@@ -9,6 +11,7 @@ class Network():
         self.output_size=output_size
         self.layer_count=layer_count
         self.learning_rate=learning_rate
+        self.cum_error:float=0.00
         self.conn=sqlite3.Connection(f'hidden-layers-{uuid.uuid4().hex[:8]}')
         self.cursor=self.conn.cursor()
         self.run_sql_file('Create.sql')
@@ -37,7 +40,7 @@ class Network():
                 sql_commands = sql_file.read()
                 self.cursor.executescript(sql_commands)
         except Exception as e:
-            print(f"Could not execute {path}.\n{e}")
+            sys.stdout.write(f"Could not execute {path}.\n{e}")
 
     @staticmethod
     def activation_relu(input:float)->float:
@@ -53,10 +56,11 @@ class Network():
     def calculate_error(predicted:int, actual:int):
         return predicted-actual
 
-    def back_propagate(self, weight_keys:[], error):
-        error*=self.learning_rate
+    def back_propagate(self, weight_keys:[], error:int):
+        adjusted_error:float=self.learning_rate*float(error)
+        self.cum_error+=adjusted_error
         for key in weight_keys:
-            self.cursor.execute('UPDATE weights SET weight = weight - ? WHERE toNodeId=? AND fromNodeId=? AND layerId=?', (error, key[0], key[1], key[2]))
+            self.cursor.execute('UPDATE weights SET weight = weight - ? WHERE toNodeId=? AND fromNodeId=? AND layerId=?', (adjusted_error, key[0], key[1], key[2]))
 
     # Classification algorithm, reducing many floats to one int 
     def forward_propagate(self, input_data:list[float], expected_result:int, is_training:bool=True):
@@ -74,10 +78,13 @@ class Network():
                 else:
                     output_size=self.output_size
                 while(j<output_size):
-                    self.cursor.execute('SELECT weight, fromNodeId, toNodeId, layerId FROM weights WHERE fromNodeId=?, toNodeId=?', (i,j))
+                    self.cursor.execute('SELECT weight, fromNodeId, toNodeId, layerId FROM weights WHERE fromNodeId=? AND toNodeId=?', (i,j))
                     weight, fromNodeId, toNodeId, layerId=self.cursor.fetchone()
                     current_layer[j]+=input_data[i]*weight
-                    if self.activation_type==0:
+                    # TODO: In the query above, perform a join on 'weights' and 'layer', to also retrive the activation type. This is pointless before more
+                    # activation functions are written, so its always relu for now.
+                    activation_type:int=0
+                    if activation_type==0:
                         current_layer[j]=self.activation_relu(current_layer[j])
                     if current_layer[j]>0:
                         weights_used.append((fromNodeId, toNodeId, layerId))
@@ -90,21 +97,23 @@ class Network():
         if(is_training):
             self.back_propagate(weights_used, error)
 
-class DataManager():
-    train_data:{}
-    def __init__(self) -> None:
-        # DICT FORMAT: train_data={index:{name:<name>, inputs:[<input_values>]}}
-        # Load and label training data here. This will change for each implementation.
-        pass
-
-    def get_random_training_data_point(self)->{}:
-        return self.train_data[random.randint(len(self.train_data.keys()))]
-
 class NetworkManager():
+    reporting_freuquency:int=100
+
     def __init__(self) -> None:
-        self.nn:Network=Network(3, 64, 16, 0, 5, 0.05)
         self.data:DataManager=DataManager()
+        self.nn:Network=Network(3, 64, 28, 0, 5, 0.05)
 
     def train(self, iterations):
         for i in range(0,iterations):
-            self.nn.forward_propagate()
+            if(i%self.reporting_freuquency==0):
+                if i!=0:
+                    error:float=self.nn.cum_error/self.reporting_freuquency
+                else:
+                    error=0
+                sys.stdout.write(f"\nIteration: {i}\tAvg error: {error}\n------------------\n")
+                self.cum_error=0
+            test_point:{}=self.data.get_random_training_data_point()
+            self.nn.forward_propagate(test_point['inputs'],int(test_point['label']))
+
+NetworkManager().train(20000)
