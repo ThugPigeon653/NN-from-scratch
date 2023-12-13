@@ -53,19 +53,17 @@ class Network():
     @staticmethod
     def calculate_error(predicted:int, actual:int):
         return predicted-actual
-
+    # I have intentionally left this un-typed, so it will work for any numerical value. Error handling should be implemented here.
     @staticmethod
-    def normalize_list(listFrom:[])->[]:
-        layer_min:float=0
-        layer_max:float=0
-        list_to:[]=[]
-        for layer in listFrom:
-            if layer>layer_max:
-                layer_max=layer
-            elif layer<layer_min:
-                layer_min=layer
-
-
+    def normalize_list(values:[])->[]:
+        if not values:
+            return []
+        value_min = min(values)
+        value_max = max(values)
+        translation = 0.5 - ((value_min + value_max) / 2)
+        dilation = value_max - value_min
+        normalized_values = [(value - translation) / dilation for value in values]
+        return normalized_values
 
     def back_propagate(self, weight_keys:[], error:int):
         adjusted_error:float=self.learning_rate*float(error)
