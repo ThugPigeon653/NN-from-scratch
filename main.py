@@ -59,7 +59,7 @@ class Network():
             self.cursor.execute('UPDATE weights SET weight = weight - ? WHERE toNodeId=? AND fromNodeId=? AND layerId=?', (error, key[0], key[1], key[2]))
 
     # Classification algorithm, reducing many floats to one int 
-    def forward_propagate(self, input_data:list[float], expected_result:int):
+    def forward_propagate(self, input_data:list[float], expected_result:int, is_training:bool=True):
         weights_used:list=[]
         current_layer:list[float]=[]
         for i in range(0,self.layer_size):
@@ -87,7 +87,8 @@ class Network():
             k+=1
         result:int=current_layer.index(max(current_layer))
         error=self.calculate_error(result, expected_result)
-        self.back_propagate(weights_used, error)
+        if(is_training):
+            self.back_propagate(weights_used, error)
 
 class DataManager():
     train_data:{}
@@ -99,15 +100,11 @@ class DataManager():
     def get_random_training_data_point(self)->{}:
         return self.train_data[random.randint(len(self.train_data.keys()))]
 
-
-
 class NetworkManager():
     def __init__(self) -> None:
         self.nn:Network=Network(3, 64, 16, 0, 5, 0.05)
         self.data:DataManager=DataManager()
 
-    # TODO: Forward prop should not call backward prop directly - instead the call should be 
-    # decoupled out to this function.
     def train(self, iterations):
         for i in range(0,iterations):
             self.nn.forward_propagate()
