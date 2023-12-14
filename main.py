@@ -58,11 +58,11 @@ class Network():
     def normalize_list(values:[])->[]:
         if not values:
             return []
-        value_min = min(values)
-        value_max = max(values)
-        translation = 0.5 - ((value_min + value_max) / 2)
-        dilation = value_max - value_min
-        normalized_values = [(value - translation) / dilation for value in values]
+        value_min = min(values) 
+        value_max = max(values) 
+        translation = (value_min + value_max) / 2 
+        dilation = value_max - value_min  
+        normalized_values = [0.500+((value - translation) / dilation) for value in values]
         return normalized_values
 
     def back_propagate(self, weight_keys:[], error:int):
@@ -77,37 +77,48 @@ class Network():
         current_layer:list[float]=[]
         layer_cache:list[float]
         k=0
+        # for each layer
         while k<=self.layer_count:
             i=0
             current_layer=[]
+            # fill current layer as empty
             for i in range(0,self.layer_size):
                 current_layer.append(0)
+            # For the first layer, we should only make the layer the size of input. After that, the size of hidden layers.
             if k==0:
                 layer_size=len(input_data)
+                layer_cache=input_data
             else:
                 layer_size=self.layer_size
+            # For every node in this layer
+            layer_cache=current_layer
             while i < layer_size:
                 j=0
+                # Output size will always match hidden layer size, except do the output which matches our intended output range
                 if(i!=len(input_data)-1):
                     output_size:int=self.layer_size
                 else:
                     output_size=self.output_size
+                # For all possible outputs
                 while(j<output_size):
+                    # get weight for this input-output combo
                     self.cursor.execute('SELECT weight, fromNodeId, toNodeId, layerId FROM weights WHERE fromNodeId=? AND toNodeId=?', (i,j))
                     weight, fromNodeId, toNodeId, layerId=self.cursor.fetchone()
-                    current_layer[j]+=input_data[i]*weight
-                    # TODO: In the query above, perform a join on 'weights' and 'layer', to also retrive the activation type. This is pointless before more
-                    # activation functions are written, so its always relu for now.
-                    activation_type:int=0
-                    if activation_type==0:
-                        current_layer[j]=self.activation_relu(current_layer[j])
-                    if current_layer[j]>0:
+                    # add input by weight to this node
+                    adjustment:float=layer_cache[i]*weight
+                    current_layer[j]+=adjustment
+                    if adjustment>0:
                         weights_used.append((fromNodeId, toNodeId, layerId))
                     j+=1
-                # normalize 
-                layer_cache=self.normalize_list(current_layer)
-
                 i+=1
+            # normalize, then activate here
+            current_layer=self.normalize_list(current_layer)
+            for layer_index in range(0,len(current_layer)):
+                current_layer[layer_index]=self.activation_relu(current_layer[layer_index])
+                if current_layer[layer_index]>0:
+                    self.cursor.execute('SELECT fromNodeId, toNodeId, layerId FROM weights WHERE fromNodeId=? AND toNodeId=?', (i,j))
+                    weights_used.append()
+
             k+=1
         result:int=current_layer.index(max(current_layer))
         error=self.calculate_error(result, expected_result)
