@@ -20,9 +20,9 @@ class Network():
         self.cursor=self.conn.cursor()
         self.run_sql_file('Create.sql')
         is_first_layer:bool=True
-        for layer in range(0,layer_count):
+        for layer in range(0,layer_count+1):
             self.cursor.execute(f'INSERT INTO layer VALUES(?,?)', (layer,activation_type))
-            print("ADDING layer")
+            #print("ADDING layer")
             layer_size_for_layer:int
             if layer==0:
                 layer_size_for_layer=input_size
@@ -30,7 +30,7 @@ class Network():
                 layer_size_for_layer=layer_size
             for node in range(0,layer_size_for_layer):
                 self.cursor.execute(f'INSERT INTO node VALUES(?,?)', (layer,node))
-                print("ADDING node")
+                #print("ADDING node")
                 if self.cursor.rowcount==0:
                     raise Exception
                 if is_first_layer==True:
@@ -40,11 +40,20 @@ class Network():
                 for fromNode in range(0,layer_input_size):
                     weight:float=random.uniform(-1.000, 1.000)
                     self.cursor.execute(f'INSERT INTO weights VALUES(?,?,?,?)',(node,fromNode,layer,weight))
-                    print("ADDING weight")
+                    #print("ADDING weight")
                     self.conn.commit()
                     if self.cursor.rowcount==0:
                         raise Exception
                 is_first_layer=False
+        # add the output layer
+        
+        self.cursor.execute(f'INSERT INTO layer VALUES(?,?)', (layer_size+1,activation_type))
+        for i in range(0,output_size):
+            self.cursor.execute(f'INSERT INTO node VALUES(?,?)', (layer_count+1,i))
+            for j in range(0,layer_size):
+                    self.cursor.execute(f'INSERT INTO weights VALUES(?,?,?,?)',(i,j,layer_count+1,random.uniform(-1.000,1.000)))
+
+                
         for node in range(0, layer_size):
             for output in range(0, output_size):
                 weight:float=random.uniform(-1.000, 1.000)
@@ -99,7 +108,7 @@ class Network():
         layer_cache:list[float]
         k=0
         # for each layer
-        while k<=self.layer_count:
+        while k<=self.layer_count+1:
             current_layer=[]
             # fill current layer as empty
             for i in range(0,self.layer_size):
@@ -112,7 +121,7 @@ class Network():
                 layer_size=self.layer_size
                 layer_cache=current_layer
             #print('\t', k, self.layer_count-1)
-            if(k!=self.layer_count-1):
+            if(k==self.layer_count-1):
                 output_size:int=self.output_size
                 #print(i, len(input_data))
                 print("VERY LAST VERY LAST VERY LAST VERY LAST VERY LAST VERY LAST VERY LAST VERY LAST ")
