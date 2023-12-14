@@ -73,13 +73,13 @@ class Network():
 
     # Classification algorithm, reducing many floats to one int 
     def forward_propagate(self, input_data:list[float], expected_result:int, is_training:bool=True):
+        print(f"len: {len(input_data)}")
         weights_used:list=[]
         current_layer:list[float]=[]
         layer_cache:list[float]
         k=0
         # for each layer
         while k<=self.layer_count:
-            i=0
             current_layer=[]
             # fill current layer as empty
             for i in range(0,self.layer_size):
@@ -90,19 +90,27 @@ class Network():
                 layer_cache=input_data
             else:
                 layer_size=self.layer_size
+                layer_cache=current_layer
+            #print(1)
+            if(i!=len(input_data)-1):
+                output_size:int=self.layer_size
+                #print(i, len(input_data))
+                #print("VERY LAST VERY LAST VERY LAST VERY LAST VERY LAST VERY LAST VERY LAST VERY LAST ")
+            else:
+                #print(f"{i} is not equal to {output_size}")
+                output_size=self.output_size
+            i=0
             # For every node in this layer
-            layer_cache=current_layer
             while i < layer_size:
                 j=0
                 # Output size will always match hidden layer size, except do the output which matches our intended output range
-                if(i!=len(input_data)-1):
-                    output_size:int=self.layer_size
-                else:
-                    output_size=self.output_size
+
+                #print(f'\t\t{self.output_size}')
                 # For all possible outputs
                 while(j<output_size):
                     # get weight for this input-output combo
                     self.cursor.execute('SELECT weight, fromNodeId, toNodeId, layerId FROM weights WHERE fromNodeId=? AND toNodeId=?', (i,j))
+                    #print(i,j)
                     weight, fromNodeId, toNodeId, layerId=self.cursor.fetchone()
                     # add input by weight to this node
                     adjustment:float=layer_cache[i]*weight
@@ -115,10 +123,6 @@ class Network():
             current_layer=self.normalize_list(current_layer)
             for layer_index in range(0,len(current_layer)):
                 current_layer[layer_index]=self.activation_relu(current_layer[layer_index])
-                if current_layer[layer_index]>0:
-                    self.cursor.execute('SELECT fromNodeId, toNodeId, layerId FROM weights WHERE fromNodeId=? AND toNodeId=?', (i,j))
-                    weights_used.append()
-
             k+=1
         result:int=current_layer.index(max(current_layer))
         error=self.calculate_error(result, expected_result)
@@ -130,7 +134,13 @@ class NetworkManager():
 
     def __init__(self) -> None:
         self.data:DataManager=DataManager()
-        self.nn:Network=Network(3, 64, 28, 0, 5, 0.05)
+        self.nn:Network=Network(
+            layer_count=1, 
+            layer_size=64, 
+            input_size=784, 
+            output_size=10, 
+            activation_type=0, 
+            learning_rate=0.05)
 
     def train(self, iterations):
         for i in range(0,iterations):
