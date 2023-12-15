@@ -30,7 +30,6 @@ class Network():
         layer_index=1
         while layer_index<=layer_count:
             for node_index in range(0,layer_size):
-                print(layer_index,node_index)
                 self.cursor.execute('INSERT INTO node VALUES(?,?)',(layer_index,node_index))
                 nodes[layer_index].append(node_index)
             layer_index+=1
@@ -42,6 +41,7 @@ class Network():
         while layer_index<=len(nodes):
             for input_node in nodes[layer_index-1]:
                 for output_node in nodes[layer_index]:
+                    print(f"layer: {layer_index}\tfromNode: {input_node}\ttoNode: {output_node}")
                     self.cursor.execute('INSERT INTO weights VALUES(?,?,?,?)',(input_node, output_node, layer_index-1, random.uniform(-1.000, 1.000)))
             layer_index+=1
         
