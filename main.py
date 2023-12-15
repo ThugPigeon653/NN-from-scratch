@@ -19,7 +19,7 @@ class Network():
         self.conn=sqlite3.Connection(f'hidden-layers-{self.session_string}.db')
         self.cursor=self.conn.cursor()
         self.run_sql_file('Create.sql')
-        nodes:[]=[[]]*(layer_count+2)
+        nodes = [[] for _ in range(layer_count + 3)]
         # insert layers
         for layer_index in range(0,layer_count+2):
             self.cursor.execute('INSERT INTO layer VALUES(?,?)',(layer_index,0))
@@ -28,23 +28,31 @@ class Network():
             self.cursor.execute('INSERT INTO node VALUES(?,?)',(0,node_index))
             nodes[0].append(node_index)
         layer_index=1
-        while layer_index<=layer_count:
+        while layer_index<=layer_count+1:
             for node_index in range(0,layer_size):
                 self.cursor.execute('INSERT INTO node VALUES(?,?)',(layer_index,node_index))
                 nodes[layer_index].append(node_index)
             layer_index+=1
         for node_index in range(0,output_size):
-            self.cursor.execute('INSERT INTO node VALUES(?,?)',(layer_count+1, node_index))
-            nodes[layer_count+1].append(node_index)
+            self.cursor.execute('INSERT INTO node VALUES(?,?)',(layer_count+2, node_index))
+            nodes[layer_count+2].append(node_index)
+
 
         layer_index=1
-        while layer_index<=len(nodes):
+        while layer_index<len(nodes):
+            print(f'\nLAYER {layer_index}:\n')
             for input_node in nodes[layer_index-1]:
+                print(f'\tINPUT {input_node}')
                 for output_node in nodes[layer_index]:
-                    print(f"layer: {layer_index}\tfromNode: {input_node}\ttoNode: {output_node}")
-                    self.cursor.execute('INSERT INTO weights VALUES(?,?,?,?)',(input_node, output_node, layer_index-1, random.uniform(-1.000, 1.000)))
+                    print(f"fromLayer: {layer_index-1}\tfromNode: {input_node}\ttoNode: {output_node}")
+                    try:
+                        self.cursor.execute('INSERT INTO weights VALUES(?,?,?,?)',(input_node, output_node, layer_index-1, random.uniform(-1.000, 1.000)))
+                    except:
+                        self.conn.commit()
+                        self.conn.close()
+                        raise Exception
             layer_index+=1
-        
+        self.conn.commit()        
         sys.stdout.write("DB initialization complete.")
         
 
@@ -145,8 +153,9 @@ class Network():
 
     def apply_weight(self, inputs:[], output_size:int, input_layer_index:int)->[]:
         output:[0]*len(inputs)
-        self.cursor.execute('CREATE VIEW layer_weights AS(SELECT * FROM weights WHERE layerId = ?)', (input_layer_index,))
-        for output_node_index in range(0,len(output_size)):
+        self.cursor.execute(f'CREATE VIEW layer_weights AS SELECT * FROM weights WHERE layerId = {input_layer_index}')
+        self.conn.commit()
+        for output_node_index in range(0,output_size):
             self.cursor.execute('SELECT toNode, fromNode, weight FROM layer_weights WHERE toNode = ?', (output_node_index,))
             weights_for_output_node=self.cursor.fetchall()
             for w in weights_for_output_node:
