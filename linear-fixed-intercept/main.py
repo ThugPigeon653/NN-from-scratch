@@ -263,7 +263,7 @@ if(is_training):
     self.back_propagate(weights_used, error)
 '''
 class NetworkManager():
-    reporting_freuquency:int=10
+    reporting_freuquency:int=1
 
     def __init__(self) -> None:
         self.data:DataManager=DataManager()
