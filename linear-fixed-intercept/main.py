@@ -40,11 +40,9 @@ class Network():
 
         layer_index=1
         while layer_index<len(nodes):
-            print(f'\nLAYER {layer_index}:\n')
             for input_node in nodes[layer_index-1]:
-                print(f'\tINPUT {input_node}')
                 for output_node in nodes[layer_index]:
-                    print(f"fromLayer: {layer_index-1}\tfromNode: {input_node}\ttoNode: {output_node}")
+                    #print(f"fromLayer: {layer_index-1}\tfromNode: {input_node}\ttoNode: {output_node}")
                     try:
                         self.cursor.execute('INSERT INTO weights VALUES(?,?,?,?)',(input_node, output_node, layer_index-1, random.uniform(-1.000, 1.000)))
                     except:
@@ -148,15 +146,16 @@ class Network():
         value_max = max(values) 
         translation = (value_min + value_max) / 2 
         dilation = value_max - value_min  
-        normalized_values = [0.500+((value - translation) / dilation) for value in values]
+        normalized_values = [2*((value - translation) / dilation) for value in values]
         return normalized_values
 
+    # No PLSQL-like features exist in sqlite, so we perform that logic with python, using simple sql queries.
     def apply_weight(self, inputs:[], output_size:int, input_layer_index:int)->[]:
-        output:[0]*len(inputs)
+        output:[]=[0]*len(inputs)
         self.cursor.execute(f'CREATE VIEW layer_weights AS SELECT * FROM weights WHERE layerId = {input_layer_index}')
         self.conn.commit()
         for output_node_index in range(0,output_size):
-            self.cursor.execute('SELECT toNode, fromNode, weight FROM layer_weights WHERE toNode = ?', (output_node_index,))
+            self.cursor.execute('SELECT toNodeId, fromNodeId, weight FROM layer_weights WHERE toNodeId = ?', (output_node_index,))
             weights_for_output_node=self.cursor.fetchall()
             for w in weights_for_output_node:
                 toNode,fromNode,weight=w
@@ -170,7 +169,9 @@ class Network():
                         self.used_nodes.append(tup)
                 else:
                     if tup in self.used_nodes:
-                        self.used_nodes.remove(tup)                    
+                        self.used_nodes.remove(tup)  
+        self.cursor.execute('DROP VIEW layer_weights')
+        self.conn.commit()
         return output
 
     def back_propagate(self, weight_keys:[], error:int):
@@ -189,12 +190,12 @@ class Network():
         for i in range(0,self.layer_count+1):
             input_data=self.apply_weight(input_data, self.layer_size, i)
             input_data=self.normalize_list(input_data)
-            input_data=self.node_activation_relu(input_data)
+            input_data=self.layer_activation_relu(input_data)
 
         i=self.layer_count+1
-        input_data=self.apply_weight(self.output_size, self.layer_size, i)
+        input_data=self.apply_weight(input_data, self.output_size, i)
         input_data=self.normalize_list(input_data)
-        input_data=self.node_activation_relu(input_data)
+        input_data=self.layer_activation_relu(input_data)
 
         result:int=input_data.index(max(input_data))
         error:int=self.calculate_error(result, expected_result)
