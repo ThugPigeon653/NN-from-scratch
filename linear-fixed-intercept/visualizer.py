@@ -1,7 +1,7 @@
 import sqlite3
 import os
 import glob
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 
 class Display():
     nodes = []
@@ -13,14 +13,14 @@ class Display():
         self.conn = sqlite3.connect(latest_db_file)
         self.cursor = self.conn.cursor()
 
-        for weight in self.get_all_weights():
+        for weight in self.get_all_nodes():
             self.nodes.append((weight[2], weight[0]))
             self.nodes.append((weight[2] - 1, weight[1]))
 
         self.plot_network()
 
-    def get_all_weights(self, batch_size=100) -> []:
-        self.cursor.execute('SELECT * FROM weights')
+    def get_all_nodes(self, batch_size=100) -> []:
+        self.cursor.execute('SELECT * FROM node')
         while True:
             batch = self.cursor.fetchmany(batch_size)
             if not batch:
@@ -28,14 +28,16 @@ class Display():
             yield batch
 
     def plot_network(self):
-        fig = go.Figure()
-
+        plt.figure(figsize=(10, 5))
         for node in self.nodes:
-            fig.add_trace(go.Scatter(x=[node[0], node[2] - 1], y=[node[1], node[3]], mode='lines+markers'))
+            plt.plot(node, marker='o', color='b')
 
-        fig.update_layout(title='Neural Network Structure', xaxis_title='Layer', yaxis_title='Node')
+        plt.title('Neural Network Structure')
+        plt.xlabel('Layer')
+        plt.ylabel('Node')
+        plt.grid(True)
 
-        fig.show()
+        plt.imsave('plot.png')
 
 # Create an instance of the Display class
 Display()

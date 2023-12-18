@@ -4,6 +4,8 @@ import json
 import os
 import random
 import sys
+import os
+
 
 class DataManager():
     # DICT FORMAT: train_data={index:{name:<name>, inputs:[<input_values>], label:<label>}}

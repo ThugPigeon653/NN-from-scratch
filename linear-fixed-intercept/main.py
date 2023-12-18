@@ -3,6 +3,9 @@ import random
 import uuid
 import sys
 from input_data import DataManager
+import os
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 class Network():
     # TODO: SQLite INSERT statements always return -1 rowcount, so we cant use this param for error checking. use another approach,
@@ -53,8 +56,6 @@ class Network():
         self.conn.commit()        
         sys.stdout.write("DB initialization complete.")
         
-
-
 
         '''self.layer_size=layer_size
         self.input_size=input_size
@@ -262,7 +263,7 @@ if(is_training):
     self.back_propagate(weights_used, error)
 '''
 class NetworkManager():
-    reporting_freuquency:int=100
+    reporting_freuquency:int=10
 
     def __init__(self) -> None:
         self.data:DataManager=DataManager()
