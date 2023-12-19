@@ -13,3 +13,18 @@ Iteration: 15	Mean square error: 25.2
 
 Iteration: 20	Mean square error: 11.8
 ------------------
+
+Iteration: 25	Mean square error: 8.6
+------------------
+
+Iteration: 30	Mean square error: 19.4
+------------------
+
+Iteration: 35	Mean square error: 12.4
+------------------
+
+Iteration: 40	Mean square error: 25.2
+------------------
+
+Iteration: 45	Mean square error: 22.6
+------------------
