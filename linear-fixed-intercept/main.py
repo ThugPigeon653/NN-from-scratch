@@ -56,7 +56,6 @@ class Network():
             layer_index+=1
         self.conn.commit()        
         sys.stdout.write("DB initialization complete.")
-        
 
         '''self.layer_size=layer_size
         self.input_size=input_size
@@ -179,7 +178,7 @@ class Network():
 
     def back_propagate(self, weight_keys:[], error:int):
         adjusted_error:float=self.learning_rate*float(error)
-        self.cum_error+=adjusted_error
+        self.cum_error+=error
         for key in weight_keys:
             self.cursor.execute('UPDATE weights SET weight = weight - ? WHERE toNodeId=? AND fromNodeId=? AND layerId=?', (adjusted_error, key[0], key[1], key[2]))
 
@@ -265,7 +264,7 @@ if(is_training):
     self.back_propagate(weights_used, error)
 '''
 class NetworkManager():
-    reporting_freuquency:int=1
+    reporting_freuquency:int=5
 
     def __init__(self) -> None:
         self.data:DataManager=DataManager()
@@ -275,7 +274,7 @@ class NetworkManager():
             input_size=784, 
             output_size=10, 
             activation_type=0, 
-            learning_rate=0.05)
+            learning_rate=0.0001)
 
     def train(self, iterations):
         for i in range(0,iterations):
@@ -289,11 +288,11 @@ class NetworkManager():
                         output:str=file.read()
                 except:
                     output=""
-                output+=f"\nIteration: {i}\nMean square error: {error}\n------------------\n"
+                output+=f"\nIteration: {i}\tMean square error: {error}\n------------------\n"
                 with(open("logs/training-log.txt", "w") as file):
                     file.write(output)
                 sys.stdout.write(output)
-                self.cum_error=0
+                self.nn.cum_error=0
             test_point:{}=self.data.get_random_training_data_point()
             self.nn.forward_propagate(test_point['inputs'],int(test_point['label']))
 

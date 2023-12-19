@@ -1,0 +1,9 @@
+
+Iteration: 0	Mean square error: 0
+------------------
+
+Iteration: 5	Mean square error: 17.0
+------------------
+
+Iteration: 10	Mean square error: 7.0
+------------------
