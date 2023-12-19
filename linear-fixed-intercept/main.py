@@ -57,56 +57,6 @@ class Network():
         self.conn.commit()        
         sys.stdout.write("DB initialization complete.")
 
-        '''self.layer_size=layer_size
-        self.input_size=input_size
-        self.output_size=output_size
-        self.layer_count=layer_count
-        self.learning_rate=learning_rate
-        self.cum_error:float=0.00
-        self.session_string:str=uuid.uuid4().hex[:8]
-        print(f"INSTANCING DB;/.{self.session_string}")
-        self.conn=sqlite3.Connection(f'hidden-layers-{self.session_string}.db')
-        self.cursor=self.conn.cursor()
-        self.run_sql_file('Create.sql')
-        for layer in range(0,layer_count+1):
-            self.cursor.execute(f'INSERT INTO layer VALUES(?,?)', (layer,activation_type))
-            #print("ADDING layer")
-            layer_input_size:int
-            if layer==0:
-                layer_input_size=input_size
-            else:
-                layer_input_size=layer_size
-            for node in range(0,layer_input_size):
-                self.cursor.execute(f'INSERT INTO node VALUES(?,?)', (layer,node))
-                #print("ADDING node")
-                if self.cursor.rowcount==0:
-                    raise Exception
-                if layer==layer_count:
-                    layer_output_size:int=output_size
-                else:
-                    layer_output_size=layer_size
-                for toNode in range(0,layer_output_size):
-                    weight:float=random.uniform(-1.000, 1.000)
-                    self.cursor.execute(f'INSERT INTO weights VALUES(?,?,?,?)',(node,toNode,layer,weight))
-                    #print("ADDING weight")
-                    self.conn.commit()
-                    if self.cursor.rowcount==0:
-                        raise Exception
-                is_first_layer=False
-        # add the output layer
-        
-        self.cursor.execute(f'INSERT INTO layer VALUES(?,?)', (layer_count+1,activation_type))
-        for i in range(0,output_size):
-            self.cursor.execute(f'INSERT INTO node VALUES(?,?)', (layer_count+1,i))
-            for j in range(0,layer_size):
-                    self.cursor.execute(f'INSERT INTO weights VALUES(?,?,?,?)',(i,j,layer_count,random.uniform(-1.000,1.000)))
-
-        for output in range(0, output_size):
-            weight:float=random.uniform(-1.000, 1.000)
-            self.cursor.execute('INSERT INTO weights VALUES(?,?,?,?)', (output, node, layer_count, weight))
-            if self.cursor.rowcount==0:
-                raise Exception'''
-
     def run_sql_file(self, file:str):
         path:str=f"sql/{file}"
         try:
@@ -206,63 +156,7 @@ class Network():
             self.back_propagate(self.used_nodes, error)
 
         # This logic was more complicated and messy than it needed to be. Leave it here until replaced
-'''#print(f"len: {len(input_data)}")
-weights_used:list=[]
-current_layer:list[float]=[]
-layer_cache:list[float]
-k=0
-# for each layer
-while k<=self.layer_count+1:
-    current_layer=[]
-    # fill current layer as empty
-    for i in range(0,self.layer_size):
-        current_layer.append(0)
-    # For the first layer, we should only make the layer the size of input. After that, the size of hidden layers.
-    if k==0:
-        layer_size=len(input_data)
-        layer_cache=input_data
-    else:
-        layer_size=self.layer_size
-        layer_cache=current_layer
-    #print('\t', k, self.layer_count-1)
-    if(k==self.layer_count-1):
-        output_size:int=self.output_size
-        #print(i, len(input_data))
-        print("VERY LAST VERY LAST VERY LAST VERY LAST VERY LAST VERY LAST VERY LAST VERY LAST ")
-    else:
-        #print(f"{i} is not equal to {output_size}")
-        output_size=self.layer_size
-    i=0
-    # For every node in this layer
-    while i < layer_size:
-        j=0
-        # Output size will always match hidden layer size, except do the output which matches our intended output range
 
-        #print(f'\t\t{self.output_size}')
-        # For all possible outputs
-        #print(output_size)
-        while(j<output_size):
-            # get weight for this input-output combo
-            self.cursor.execute('SELECT weight, fromNodeId, toNodeId, layerId FROM weights WHERE fromNodeId=? AND toNodeId=?', (i,j))
-            weight, fromNodeId, toNodeId, layerId=self.cursor.fetchone()
-            # add input by weight to this node
-            adjustment:float=layer_cache[i]*weight
-            current_layer[j]+=adjustment
-            if adjustment>0:
-                weights_used.append((fromNodeId, toNodeId, layerId))
-            j+=1
-        i+=1
-    # normalize, then activate here
-    current_layer=self.normalize_list(current_layer)
-    for layer_index in range(0,len(current_layer)):
-        current_layer[layer_index]=self.activation_relu(current_layer[layer_index])
-    layer_cache=current_layer
-    k+=1
-result:int=current_layer.index(max(current_layer))
-error=self.calculate_error(result, expected_result)
-if(is_training):
-    self.back_propagate(weights_used, error)
-'''
 class NetworkManager():
     reporting_freuquency:int=5
 

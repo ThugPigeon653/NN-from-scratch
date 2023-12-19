@@ -7,3 +7,9 @@ Iteration: 5	Mean square error: 17.0
 
 Iteration: 10	Mean square error: 7.0
 ------------------
+
+Iteration: 15	Mean square error: 25.2
+------------------
+
+Iteration: 20	Mean square error: 11.8
+------------------
