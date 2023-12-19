@@ -1,3 +1,4 @@
+import math
 import sqlite3
 import random
 import uuid
@@ -135,8 +136,9 @@ class Network():
         return output
 
     @staticmethod
-    def calculate_error(predicted:int, actual:int):
-        return predicted-actual
+    def square_error(predicted:int, actual:int):
+        return math.pow(predicted-actual, 2)
+    
     # I have intentionally left this un-typed, so it will work for any numerical value. Error handling should be implemented here.
     @staticmethod
     def normalize_list(values:[])->[]:
@@ -199,7 +201,7 @@ class Network():
         input_data=self.layer_activation_relu(input_data)
 
         result:int=input_data.index(max(input_data))
-        error:int=self.calculate_error(result, expected_result)
+        error:int=self.square_error(result, expected_result)
         
         if(is_training):
             self.back_propagate(self.used_nodes, error)
@@ -282,7 +284,15 @@ class NetworkManager():
                     error:float=self.nn.cum_error/self.reporting_freuquency
                 else:
                     error=0
-                sys.stdout.write(f"\nIteration: {i}\tAvg error: {error}\n------------------\n")
+                try:
+                    with open("logs/training-log.txt") as file:
+                        output:str=file.read()
+                except:
+                    output=""
+                output+=f"\nIteration: {i}\nMean square error: {error}\n------------------\n"
+                with(open("logs/training-log.txt", "w") as file):
+                    file.write(output)
+                sys.stdout.write(output)
                 self.cum_error=0
             test_point:{}=self.data.get_random_training_data_point()
             self.nn.forward_propagate(test_point['inputs'],int(test_point['label']))

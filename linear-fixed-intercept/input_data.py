@@ -6,6 +6,7 @@ import random
 import sys
 import os
 
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 class DataManager():
     # DICT FORMAT: train_data={index:{name:<name>, inputs:[<input_values>], label:<label>}}
