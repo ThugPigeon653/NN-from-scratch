@@ -21,7 +21,7 @@ class Network():
         self.learning_rate=learning_rate
         self.cum_error:float=0.00
         self.session_string:str=uuid.uuid4().hex[:8]
-        print(f"INSTANCING DB;/.{self.session_string}")
+        print(f"INSTANCING DB ({self.session_string})...")
         self.conn=sqlite3.Connection(f'hidden-layers-{self.session_string}.db')
         self.cursor=self.conn.cursor()
         self.run_sql_file('Create.sql')
@@ -87,8 +87,12 @@ class Network():
         return output
 
     @staticmethod
-    def MSE(predicted:int, actual:int):
-        return ((math.pow(predicted-actual, 2))**2)/2
+    def square_error(predicted:list[float], actual:list[float]):
+        outcome=[]
+        #print(f"-- {len(predicted)}    {len(actual)} --")
+        for i in range(len(predicted)):
+            outcome.append(((predicted[i]-actual[i])**2)/2)
+        return outcome
     
     # I have intentionally left this un-typed, so it will work for any numerical value. Error handling should be implemented here.
     @staticmethod
@@ -105,7 +109,8 @@ class Network():
 
     # No PLSQL-like features exist in sqlite, so we perform that logic with python, using simple sql queries.
     def apply_weight(self, inputs:[], output_size:int, input_layer_index:int)->[]:
-        output:[]=[0]*len(inputs)
+        #print(len(inputs), output_size)
+        output:[]=[0]*output_size
         self.cursor.execute(f'CREATE VIEW layer_weights AS SELECT * FROM weights WHERE layerId = {input_layer_index}')
         self.conn.commit()
         for output_node_index in range(0,output_size):
@@ -113,19 +118,11 @@ class Network():
             weights_for_output_node=self.cursor.fetchall()
             for w in weights_for_output_node:
                 toNode,fromNode,weight=w
-                adjustment=weight*inputs[fromNode]
-                output[toNode]+=adjustment
+                output[toNode]+=weight*inputs[fromNode]
 
-                # Likely an excessively expensive way of tracking which parts of the network are to blame for error. 
-                tup=(toNode, fromNode, input_layer_index)
-                if output[toNode]>0:
-                    if tup not in self.used_nodes:
-                        self.used_nodes.append(tup)
-                else:
-                    if tup in self.used_nodes:
-                        self.used_nodes.remove(tup)  
         self.cursor.execute('DROP VIEW layer_weights')
         self.conn.commit()
+        #print(len(output))
         return output
 
     def back_propagate(self, weight_keys:[], error:int):
@@ -137,33 +134,46 @@ class Network():
     # Classification algorithm, reducing many floats to one int 
     # NOTE: Numerous functions have been made from the previous implementation. Even though they are  only called by this function,
     # re-usability is important, because it means we can easily change how the model forward propagates
-    def forward_propagate(self, input_data:list[float], expected_result:int, is_training:bool=True):
+    def forward_propagate(self, input_data:list[float], expected_result:list[float], is_training:bool=True):
         # List format ->   [(<layer_index> , <node_used>])]
         self.used_nodes:[]=[]
-
-        for i in range(0,self.layer_count+1):
+        activations=[]
+        for i in range(0,self.layer_count+1):            
             input_data=self.apply_weight(input_data, self.layer_size, i)
             input_data=self.normalize_list(input_data)
             input_data=self.layer_activation_relu(input_data)
+            activations.append(input_data.copy())
 
         i=self.layer_count+1
         input_data=self.apply_weight(input_data, self.output_size, i)
         input_data=self.normalize_list(input_data)
         input_data=self.layer_activation_relu(input_data)
-        for input in input_data:
-            self.activations.append()
+        activations.append(input_data.copy())
 
-        result:int=input_data.index(max(input_data))
-        error:int=self.MSE(result, expected_result)
+        error:list[float]=self.square_error(input_data, expected_result)
         
         if(is_training):
             self.cum_error+=error
+
+        i=0
+        if len(self.activations)!=0:
+            for i in range(0,len(error)):
+                self.cum_error[i]+=error[i]
+            while i<len(activations):
+                j=0
+                while j<len(activations[j]):
+                    self.activations[i][j]+=activations[i][j]
+                    j+=1
+                i+=1
+        else:
+            self.cum_error=error.copy()
+            self.activations=activations.copy()
+
 
         # This logic was more complicated and messy than it needed to be. Leave it here until replaced
 
 class NetworkManager():
     reporting_freuquency:int=5
-
 
     def __init__(self) -> None:
         self.data:DataManager=DataManager()
@@ -176,24 +186,29 @@ class NetworkManager():
             learning_rate=0.0001)
 
     def train(self, iterations:int, batch_size:int):
+        self.reporting_freuquency=batch_size
         for i in range(0,iterations):
             if(i%self.reporting_freuquency==0):
                 if i!=0:
-                    error:float=self.nn.cum_error/self.reporting_freuquency
-                else:
-                    error=0
+                    for i in range(0, len(self.nn.cum_error)):
+                        self.nn.cum_error[i]/self.reporting_freuquency
+                    for i in range(0,len(self.nn.activations)):
+                        for j in range(len(self.nn.activations[i])):
+                            self.nn.activations[i][j]/=batch_size
                 try:
                     with open("logs/training-log.txt") as file:
                         output:str=file.read()
                 except:
                     output=""
-                output+=f"\nIteration: {i}\tMean square error: {error}\n------------------\n"
+                output+=f"\nIteration: {i}\tMean square error: {self.nn.cum_error}\nActivations: {self.nn.activations}\n------------------\n"
                 with(open("logs/training-log.txt", "w") as file):
                     file.write(output)
                 sys.stdout.write(output)
-                self.nn.cum_error=0
+                self.nn.cum_error=[]
             test_point:{}=self.data.get_random_training_data_point()
-            self.nn.forward_propagate(test_point['inputs'],int(test_point['label']))
+            expected_result:list[float]=[0]*self.nn.output_size
+            expected_result[int(test_point['label'])]=1
+            self.nn.forward_propagate(test_point['inputs'],expected_result)
 
 ml=NetworkManager()
 ml.train(20000, 100)
