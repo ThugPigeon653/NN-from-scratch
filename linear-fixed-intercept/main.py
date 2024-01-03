@@ -9,6 +9,8 @@ import os
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 class Network():
+    
+    activations:list[list[float]]=[]
     # TODO: SQLite INSERT statements always return -1 rowcount, so we cant use this param for error checking. use another approach,
     # preferably without extra calls to db
     def __init__(self, layer_count:int, layer_size:int, input_size:int, output_size:int, activation_type:int, learning_rate:float) -> None:
@@ -85,8 +87,8 @@ class Network():
         return output
 
     @staticmethod
-    def square_error(predicted:int, actual:int):
-        return math.pow(predicted-actual, 2)
+    def MSE(predicted:int, actual:int):
+        return ((math.pow(predicted-actual, 2))**2)/2
     
     # I have intentionally left this un-typed, so it will work for any numerical value. Error handling should be implemented here.
     @staticmethod
@@ -148,17 +150,20 @@ class Network():
         input_data=self.apply_weight(input_data, self.output_size, i)
         input_data=self.normalize_list(input_data)
         input_data=self.layer_activation_relu(input_data)
+        for input in input_data:
+            self.activations.append()
 
         result:int=input_data.index(max(input_data))
-        error:int=self.square_error(result, expected_result)
+        error:int=self.MSE(result, expected_result)
         
         if(is_training):
-            self.back_propagate(self.used_nodes, error)
+            self.cum_error+=error
 
         # This logic was more complicated and messy than it needed to be. Leave it here until replaced
 
 class NetworkManager():
     reporting_freuquency:int=5
+
 
     def __init__(self) -> None:
         self.data:DataManager=DataManager()
@@ -170,7 +175,7 @@ class NetworkManager():
             activation_type=0, 
             learning_rate=0.0001)
 
-    def train(self, iterations):
+    def train(self, iterations:int, batch_size:int):
         for i in range(0,iterations):
             if(i%self.reporting_freuquency==0):
                 if i!=0:
@@ -191,4 +196,4 @@ class NetworkManager():
             self.nn.forward_propagate(test_point['inputs'],int(test_point['label']))
 
 ml=NetworkManager()
-ml.train(20000)
+ml.train(20000, 100)
