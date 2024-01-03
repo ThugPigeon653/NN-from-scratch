@@ -19,7 +19,7 @@ class Network():
         self.output_size=output_size
         self.layer_count=layer_count
         self.learning_rate=learning_rate
-        self.cum_error:float=0.00
+        self.cum_error:list[float]=[]
         self.session_string:str=uuid.uuid4().hex[:8]
         print(f"INSTANCING DB ({self.session_string})...")
         self.conn=sqlite3.Connection(f'hidden-layers-{self.session_string}.db')
@@ -127,7 +127,10 @@ class Network():
 
     # Fundamental misunderstanding of backprop lead to incorrect implementation. The logic around this function has been altered, so the function
     # can now be corrected to use gradient descent.
-    def back_propagate(self):
+    def back_propagate(self, batch_size):
+        # Find average values for all batch-based error, activations, etc.
+        for i in range(0,len(self.cum_error)):
+            self.cum_error[i](self.cum_error[i]/batch_size)
         pass
 
     # Classification algorithm, reducing many floats to one int 
