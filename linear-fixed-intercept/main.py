@@ -125,11 +125,10 @@ class Network():
         #print(len(output))
         return output
 
-    def back_propagate(self, weight_keys:[], error:int):
-        adjusted_error:float=self.learning_rate*float(error)
-        self.cum_error+=error
-        for key in weight_keys:
-            self.cursor.execute('UPDATE weights SET weight = weight - ? WHERE toNodeId=? AND fromNodeId=? AND layerId=?', (adjusted_error, key[0], key[1], key[2]))
+    # Fundamental misunderstanding of backprop lead to incorrect implementation. The logic around this function has been altered, so the function
+    # can now be corrected to use gradient descent.
+    def back_propagate(self):
+        pass
 
     # Classification algorithm, reducing many floats to one int 
     # NOTE: Numerous functions have been made from the previous implementation. Even though they are  only called by this function,
@@ -203,6 +202,7 @@ class NetworkManager():
                 with(open("logs/training-log.txt", "w") as file):
                     file.write(output)
                 sys.stdout.write(output)
+                self.nn.back_propagate()
                 self.nn.cum_error=[]
                 self.nn.activations=[]
             test_point:{}=self.data.get_random_training_data_point()
