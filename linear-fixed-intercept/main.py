@@ -151,13 +151,12 @@ class Network():
         activations.append(input_data.copy())
 
         error:list[float]=self.square_error(input_data, expected_result)
-        
-        if(is_training):
-            self.cum_error+=error
 
         i=0
         if len(self.activations)!=0:
             for i in range(0,len(error)):
+                print(i)
+                print(self.cum_error[i], error[i])
                 self.cum_error[i]+=error[i]
             while i<len(activations):
                 j=0
@@ -205,6 +204,7 @@ class NetworkManager():
                     file.write(output)
                 sys.stdout.write(output)
                 self.nn.cum_error=[]
+                self.nn.activations=[]
             test_point:{}=self.data.get_random_training_data_point()
             expected_result:list[float]=[0]*self.nn.output_size
             expected_result[int(test_point['label'])]=1
