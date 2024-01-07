@@ -68,9 +68,9 @@ class Network():
         except Exception as e:
             sys.stdout.write(f"Could not execute {path}.\n{e}")
 
-    @staticmethod
-    def layer_activation_relu(inputs:list[float])->list[float]:
+    def layer_activation_relu(self, inputs:list[float])->list[float]:
         output:list[float]=[]
+        self.activation_prime=self.relu_prime
         for input in inputs:
             if input<=0:
                 output.append(0)
@@ -78,13 +78,14 @@ class Network():
                 output.append(input)
         return output
 
-    @staticmethod
-    def node_activation_relu(input)->float:
-        if input<0:
-            output=0
-        else:
-            output=input
-        return output
+    def relu_prime(inputs:list[float])->list[float]:
+        i=0
+        while i<len(inputs):
+            if inputs[i]>0:
+                inputs[i]=0
+            else:
+                inputs[i]=0
+        return inputs
 
     @staticmethod
     def square_error(predicted:list[float], actual:list[float]):
@@ -125,34 +126,57 @@ class Network():
         #print(len(output))
         return output
 
-    # Fundamental misunderstanding of backprop lead to incorrect implementation. The logic around this function has been altered, so the function
-    # can now be corrected to use gradient descent.
     def back_propagate(self, batch_size):
         # Find average values for all batch-based error, activations, etc.
+        weight_delta:{}={}
         for i in range(0,len(self.cum_error)):
             self.cum_error[i](self.cum_error[i]/batch_size)
-        pass
+        i=0
+        while i<len(self.activations):
+            j=0
+            while j<len(self.activations[i]):
+                self.activations[i][j]/=batch_size
+                j+=1
+            i+=1
+        
+        i=len(self.z)-1
+        delta:list[float]=[]
+        activations=self.activation_prime(self.z[i])
+        j=0
+        for i in len(activations):
+            activations[i]*=self.error_prime
+        self.error_prime*self.activation_prime()
+        weight_delta[f"dW{i}"]=delta
+        
+        
 
     # Classification algorithm, reducing many floats to one int 
     # NOTE: Numerous functions have been made from the previous implementation. Even though they are  only called by this function,
     # re-usability is important, because it means we can easily change how the model forward propagates
     def forward_propagate(self, input_data:list[float], expected_result:list[float], is_training:bool=True):
         # List format ->   [(<layer_index> , <node_used>])]
-        self.used_nodes:[]=[]
         activations=[]
+        z=[]
         for i in range(0,self.layer_count+1):            
             input_data=self.apply_weight(input_data, self.layer_size, i)
             input_data=self.normalize_list(input_data)
+            z.append(input_data.copy())
             input_data=self.layer_activation_relu(input_data)
             activations.append(input_data.copy())
 
         i=self.layer_count+1
         input_data=self.apply_weight(input_data, self.output_size, i)
         input_data=self.normalize_list(input_data)
+        z.append(input_data.copy())
         input_data=self.layer_activation_relu(input_data)
         activations.append(input_data.copy())
 
         error:list[float]=self.square_error(input_data, expected_result)
+        self.error_prime:list[float]=[]
+        i=0
+        while i<len(input_data):
+            self.error_prime.append(input_data[i]-expected_result[i])
+            i+=1
 
         i=0
         if len(self.activations)!=0:
@@ -164,11 +188,13 @@ class Network():
                 j=0
                 while j<len(activations[j]):
                     self.activations[i][j]+=activations[i][j]
+                    self.z[i][j]+=z[i][j]
                     j+=1
                 i+=1
         else:
             self.cum_error=error.copy()
             self.activations=activations.copy()
+            self.z=z.copy()
 
 
         # This logic was more complicated and messy than it needed to be. Leave it here until replaced
