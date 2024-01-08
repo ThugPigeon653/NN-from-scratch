@@ -136,18 +136,19 @@ class Network():
                 self.activations[i][j]/=batch_size
                 j+=1
             i+=1
-        
+        # TODO: Multiply together each ELEMENT of error_prime*input values, rather than finding dot product
         i=len(self.z)-1
+        # last layer partial derivative: E0'*a'*x
         # a' is 2D, and has vert correlation to input neurons, and horiz to output neurons.
-        del_activations=np.array(self.activation_prime(self.z[i]))
+        del_activations=np.array(self.activation_prime(self.z[i])).reshape(1,-1)
         # E' runs on axis of output neurons (horizontal)
-        error_prime=np.array(self.error_prime)
-        # input (X/H) runs on axis of input neurons (vertical)
-        input_values=np.array(self.x[i])        
-        print(error_prime, del_activations)
-        layer_gradient:np.ndarray=error_prime.T.dot(del_activations)
-        print(layer_gradient.shape)
-        weight_deltas.append(layer_gradient.dot(input_values))
+        error_prime=np.array(self.error_prime).reshape(-1,1)
+        # x runs on axis of input neurons (vertical)
+        input_values=np.array(self.x[i]).reshape(-1,1)
+        print(f"gradient = {error_prime.shape} * {del_activations.shape}")
+        layer_gradient:np.ndarray=error_prime.dot(del_activations)
+        print(f"delta = {layer_gradient.shape} * {input_values.shape}")
+        weight_deltas.append(layer_gradient.T.dot(input_values))
         i-=1
         while i>=0:
             del_activations=np.array(self.activation_prime(self.z[i]))
@@ -198,7 +199,7 @@ class Network():
                 self.cum_error[i]+=error[i]
             while i<len(activations):
                 j=0
-                while j<len(activations[j]):
+                while j<len(activations[i]):
                     self.activations[i][j]+=activations[i][j]
                     self.z[i][j]+=z[i][j]
                     self.x[i][j]+=x[i][j]
