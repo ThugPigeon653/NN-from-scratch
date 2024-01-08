@@ -5,6 +5,7 @@ import uuid
 import sys
 from input_data import DataManager
 import os
+import numpy as np
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -140,13 +141,12 @@ class Network():
             i+=1
         
         i=len(self.z)-1
-        delta:list[float]=[]
-        activations=self.activation_prime(self.z[i])
-        j=0
-        for i in len(activations):
-            activations[i]*=self.error_prime
-        self.error_prime*self.activation_prime()
-        weight_delta[f"dW{i}"]=delta
+        activations=np.array(self.activation_prime(self.z[i]))
+        error_prime=np.array(self.error_prime)
+        input_values=np.array(self.x[i])
+
+        layer_g=error_prime*activations
+        weight_delta[f"dW{i}"]=layer_g*input_values
         
         
 
@@ -156,8 +156,10 @@ class Network():
     def forward_propagate(self, input_data:list[float], expected_result:list[float], is_training:bool=True):
         # List format ->   [(<layer_index> , <node_used>])]
         activations=[]
-        z=[]
-        for i in range(0,self.layer_count+1):            
+        z:list[list[float]]=[]
+        x:list[list[float]]=[]
+        for i in range(0,self.layer_count+1): 
+            x.append(input_data.copy())           
             input_data=self.apply_weight(input_data, self.layer_size, i)
             input_data=self.normalize_list(input_data)
             z.append(input_data.copy())
@@ -165,6 +167,7 @@ class Network():
             activations.append(input_data.copy())
 
         i=self.layer_count+1
+        activations.append(input_data.copy())
         input_data=self.apply_weight(input_data, self.output_size, i)
         input_data=self.normalize_list(input_data)
         z.append(input_data.copy())
@@ -189,12 +192,14 @@ class Network():
                 while j<len(activations[j]):
                     self.activations[i][j]+=activations[i][j]
                     self.z[i][j]+=z[i][j]
+                    self.x[i][j]+=x[i][j]
                     j+=1
                 i+=1
         else:
             self.cum_error=error.copy()
             self.activations=activations.copy()
             self.z=z.copy()
+            self.x=x.copy()
 
 
         # This logic was more complicated and messy than it needed to be. Leave it here until replaced
