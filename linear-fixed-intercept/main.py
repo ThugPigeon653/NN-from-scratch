@@ -49,7 +49,6 @@ class Network():
         while layer_index<len(nodes):
             for input_node in nodes[layer_index-1]:
                 for output_node in nodes[layer_index]:
-                    #print(f"fromLayer: {layer_index-1}\tfromNode: {input_node}\ttoNode: {output_node}")
                     try:
                         self.cursor.execute('INSERT INTO weights VALUES(?,?,?,?)',(input_node, output_node, layer_index-1, random.uniform(-1.000, 1.000)))
                     except:
@@ -79,19 +78,19 @@ class Network():
                 output.append(input)
         return output
 
-    def relu_prime(inputs:list[float])->list[float]:
+    def relu_prime(self, inputs:list[float])->list[float]:
         i=0
         while i<len(inputs):
             if inputs[i]>0:
                 inputs[i]=0
             else:
                 inputs[i]=0
+            i+=1
         return inputs
 
     @staticmethod
     def square_error(predicted:list[float], actual:list[float]):
         outcome=[]
-        #print(f"-- {len(predicted)}    {len(actual)} --")
         for i in range(len(predicted)):
             outcome.append(((predicted[i]-actual[i])**2)/2)
         return outcome
@@ -99,7 +98,6 @@ class Network():
     # I have intentionally left this un-typed, so it will work for any numerical value. Error handling should be implemented here.
     @staticmethod
     def normalize_list(values:[])->[]:
-        #print(f'\t{values}')
         if not values:
             return []
         value_min = min(values) 
@@ -111,7 +109,6 @@ class Network():
 
     # No PLSQL-like features exist in sqlite, so we perform that logic with python, using simple sql queries.
     def apply_weight(self, inputs:[], output_size:int, input_layer_index:int)->[]:
-        #print(len(inputs), output_size)
         output:[]=[0]*output_size
         self.cursor.execute(f'CREATE VIEW layer_weights AS SELECT * FROM weights WHERE layerId = {input_layer_index}')
         self.conn.commit()
@@ -124,14 +121,14 @@ class Network():
 
         self.cursor.execute('DROP VIEW layer_weights')
         self.conn.commit()
-        #print(len(output))
         return output
 
     def back_propagate(self, batch_size):
+        print('BACKPROP')
         # Find average values for all batch-based error, activations, etc.
-        weight_delta:{}={}
+        weight_deltas=[]
         for i in range(0,len(self.cum_error)):
-            self.cum_error[i](self.cum_error[i]/batch_size)
+            self.cum_error[i]/=batch_size
         i=0
         while i<len(self.activations):
             j=0
@@ -141,12 +138,27 @@ class Network():
             i+=1
         
         i=len(self.z)-1
-        activations=np.array(self.activation_prime(self.z[i]))
+        # a' is 2D, and has vert correlation to input neurons, and horiz to output neurons.
+        del_activations=np.array(self.activation_prime(self.z[i]))
+        # E' runs on axis of output neurons (horizontal)
         error_prime=np.array(self.error_prime)
-        input_values=np.array(self.x[i])
-
-        layer_g=error_prime*activations
-        weight_delta[f"dW{i}"]=layer_g*input_values
+        # input (X/H) runs on axis of input neurons (vertical)
+        input_values=np.array(self.x[i])        
+        print(error_prime, del_activations)
+        layer_gradient:np.ndarray=error_prime.T.dot(del_activations)
+        print(layer_gradient.shape)
+        weight_deltas.append(layer_gradient.dot(input_values))
+        i-=1
+        while i>=0:
+            del_activations=np.array(self.activation_prime(self.z[i]))
+            self.cursor.execute('SELECT weight FROM weights WHERE layerId = ?',(i,))
+            weights=self.cursor.fetchall()
+            del_activations=del_activations.dot(np.array(weights))
+            print(f"del_activations: {del_activations.shape}\ngradent before: {layer_gradient.shape}\n")
+            layer_gradient=layer_gradient.dot(del_activations)
+            print(f"gradient after: {layer_gradient.shape}")
+            weight_deltas.append(layer_gradient.dot(np.vstack(np.array(self.x[i]))))
+            i-=1
         
         
 
@@ -167,7 +179,7 @@ class Network():
             activations.append(input_data.copy())
 
         i=self.layer_count+1
-        activations.append(input_data.copy())
+        x.append(input_data.copy())
         input_data=self.apply_weight(input_data, self.output_size, i)
         input_data=self.normalize_list(input_data)
         z.append(input_data.copy())
@@ -180,12 +192,9 @@ class Network():
         while i<len(input_data):
             self.error_prime.append(input_data[i]-expected_result[i])
             i+=1
-
         i=0
         if len(self.activations)!=0:
             for i in range(0,len(error)):
-                print(i)
-                print(self.cum_error[i], error[i])
                 self.cum_error[i]+=error[i]
             while i<len(activations):
                 j=0
@@ -235,8 +244,9 @@ class NetworkManager():
                 output+=f"\nIteration: {i}\tMean square error: {self.nn.cum_error}\nActivations: {self.nn.activations}\n------------------\n"
                 with(open("logs/training-log.txt", "w") as file):
                     file.write(output)
-                sys.stdout.write(output)
-                self.nn.back_propagate()
+                #sys.stdout.write(output)
+                if(i!=0):
+                    self.nn.back_propagate(self.reporting_freuquency)
                 self.nn.cum_error=[]
                 self.nn.activations=[]
             test_point:{}=self.data.get_random_training_data_point()
@@ -245,4 +255,4 @@ class NetworkManager():
             self.nn.forward_propagate(test_point['inputs'],expected_result)
 
 ml=NetworkManager()
-ml.train(20000, 100)
+ml.train(20000, 10)
