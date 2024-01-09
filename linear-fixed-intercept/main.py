@@ -79,10 +79,11 @@ class Network():
         return output
 
     def relu_prime(self, inputs:list[float])->list[float]:
+        print(inputs)
         i=0
         while i<len(inputs):
             if inputs[i]>0:
-                inputs[i]=0
+                inputs[i]=1
             else:
                 inputs[i]=0
             i+=1
@@ -128,6 +129,8 @@ class Network():
 
     def back_propagate(self, batch_size):
         print('BACKPROP')
+        self.cursor.execute('SELECT SUM(weight) FROM weights')
+        print(f"Summed weight: {self.cursor.fetchone()}")
         # Find average values for all batch-based error, activations, etc.
         for i in range(0,len(self.cum_error)):
             self.cum_error[i]/=batch_size
@@ -140,6 +143,7 @@ class Network():
                 self.x[i][j]/=batch_size
                 j+=1
             i+=1
+
         layerId:int=self.layer_count+1
 
         self.cursor.execute('SELECT fromNodeId, toNodeId, weight FROM weights WHERE layerId=?',(layerId,))
@@ -148,16 +152,15 @@ class Network():
         z=self.activation_prime(self.z[layerId])
         cost_prime:[]=[0]*len(set(fromNodes))
         i=0
-        for node in nodes:
-            cost_prime_index=node[0]
-            error_index=node[1]
-            print(layerId, cost_prime_index, error_index)
+        for weight in nodes:
+            cost_prime_index=weight[0]
+            error_index=weight[1]
             this_del=self.cum_error[error_index]*z[error_index]
             cost_prime[cost_prime_index]+=this_del
-            this_del*=self.x[layerId][error_index]
-            this_del=int(node[2])-(this_del*self.learning_rate)
-            self.cursor.execute(f'UPDATE weights SET weight={this_del} WHERE fromNodeId=? AND toNodeId=?',(cost_prime_index, error_index))
+            this_del=weight[2]-(this_del*self.learning_rate)
+            self.cursor.execute(f'UPDATE weights SET weight={this_del} WHERE layerId=? AND fromNodeId=? AND toNodeId=?',(layerId, cost_prime_index, error_index))
             i+=1
+        self.conn.commit()
 
         '''# TODO: Multiply together each ELEMENT of error_prime*input values, rather than finding dot product
         i=len(self.z)-1
@@ -189,6 +192,7 @@ class Network():
     # re-usability is important, because it means we can easily change how the model forward propagates
     def forward_propagate(self, input_data:list[float], expected_result:list[float], is_training:bool=True):
         activations=[]
+        #print(input_data)
         z:list[list[float]]=[]
         x:list[list[float]]=[]
         for i in range(0,self.layer_count+1): 
@@ -215,21 +219,21 @@ class Network():
             i+=1
         i=0
         if len(self.activations)!=0:
-            for i in range(0,len(error)):
-                self.cum_error[i]+=error[i]
+            for k in range(0,len(error)):
+                self.cum_error[k]+=error[k]
             while i<len(activations):
                 j=0
                 while j<len(activations[i]):
                     self.activations[i][j]+=activations[i][j]
-                    self.z[i][j]+=z[i][j]
                     self.x[i][j]+=x[i][j]
+                    self.z[i][j]+=z[i][j]
                     j+=1
                 i+=1
         else:
             self.cum_error=error.copy()
             self.activations=activations.copy()
-            self.z=z.copy()
             self.x=x.copy()
+            self.z=z.copy()
 
 
         # This logic was more complicated and messy than it needed to be. Leave it here until replaced
@@ -245,7 +249,7 @@ class NetworkManager():
             input_size=784, 
             output_size=10, 
             activation_type=0, 
-            learning_rate=0.0001)
+            learning_rate=0.001)
 
     def train(self, iterations:int, batch_size:int):
         self.reporting_freuquency=batch_size
@@ -276,4 +280,4 @@ class NetworkManager():
             self.nn.forward_propagate(test_point['inputs'],expected_result)
 
 ml=NetworkManager()
-ml.train(20000, 100)
+ml.train(20000, 10)
