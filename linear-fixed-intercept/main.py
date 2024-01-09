@@ -5,15 +5,15 @@ import uuid
 import sys
 from input_data import DataManager
 import os
-import numpy as np
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 class Network():
     
     activations:list[list[float]]=[]
+
     # TODO: SQLite INSERT statements always return -1 rowcount, so we cant use this param for error checking. use another approach,
-    # preferably without extra calls to db
+    # preferably without extra calls to db.
     def __init__(self, layer_count:int, layer_size:int, input_size:int, output_size:int, activation_type:int, learning_rate:float) -> None:
         self.layer_size=layer_size
         self.input_size=input_size
@@ -92,7 +92,7 @@ class Network():
     def square_error(predicted:list[float], actual:list[float]):
         outcome=[]
         for i in range(len(predicted)):
-            outcome.append(((predicted[i]-actual[i])**2)/2)
+            outcome.append(((predicted[i]-actual[i])))
         return outcome
     
     # I have intentionally left this un-typed, so it will work for any numerical value. Error handling should be implemented here.
@@ -104,7 +104,10 @@ class Network():
         value_max = max(values) 
         translation = (value_min + value_max) / 2 
         dilation = value_max - value_min  
-        normalized_values = [2*((value - translation) / dilation) for value in values]
+        if dilation==0.0000:
+            normalized_values=values
+        else:
+            normalized_values = [2*((value - translation) / dilation) for value in values]
         return normalized_values
 
     # No PLSQL-like features exist in sqlite, so we perform that logic with python, using simple sql queries.
@@ -126,7 +129,6 @@ class Network():
     def back_propagate(self, batch_size):
         print('BACKPROP')
         # Find average values for all batch-based error, activations, etc.
-        weight_deltas=[]
         for i in range(0,len(self.cum_error)):
             self.cum_error[i]/=batch_size
         i=0
@@ -134,9 +136,30 @@ class Network():
             j=0
             while j<len(self.activations[i]):
                 self.activations[i][j]/=batch_size
+                self.z[i][j]/=batch_size
+                self.x[i][j]/=batch_size
                 j+=1
             i+=1
-        # TODO: Multiply together each ELEMENT of error_prime*input values, rather than finding dot product
+        layerId:int=self.layer_count+1
+
+        self.cursor.execute('SELECT fromNodeId, toNodeId, weight FROM weights WHERE layerId=?',(layerId,))
+        nodes=self.cursor.fetchall()
+        fromNodes, toNodes, weights=zip(*nodes)
+        z=self.activation_prime(self.z[layerId])
+        cost_prime:[]=[0]*len(set(fromNodes))
+        i=0
+        for node in nodes:
+            cost_prime_index=node[0]
+            error_index=node[1]
+            print(layerId, cost_prime_index, error_index)
+            this_del=self.cum_error[error_index]*z[error_index]
+            cost_prime[cost_prime_index]+=this_del
+            this_del*=self.x[layerId][error_index]
+            this_del=int(node[2])-(this_del*self.learning_rate)
+            self.cursor.execute(f'UPDATE weights SET weight={this_del} WHERE fromNodeId=? AND toNodeId=?',(cost_prime_index, error_index))
+            i+=1
+
+        '''# TODO: Multiply together each ELEMENT of error_prime*input values, rather than finding dot product
         i=len(self.z)-1
         # last layer partial derivative: E0'*a'*x
         # a' is 2D, and has vert correlation to input neurons, and horiz to output neurons.
@@ -158,16 +181,13 @@ class Network():
             print(f"del_activations: {del_activations.shape}\ngradent before: {layer_gradient.shape}\n")
             layer_gradient=layer_gradient.dot(del_activations)
             print(f"gradient after: {layer_gradient.shape}")
-            weight_deltas.append(layer_gradient.dot(np.vstack(np.array(self.x[i]))))
-            i-=1
-        
-        
+            weight_deltas.append(layer_gradient.dot(np.vstack(np.array(self.x[i]))))0
+            i-=1'''
 
     # Classification algorithm, reducing many floats to one int 
     # NOTE: Numerous functions have been made from the previous implementation. Even though they are  only called by this function,
     # re-usability is important, because it means we can easily change how the model forward propagates
     def forward_propagate(self, input_data:list[float], expected_result:list[float], is_training:bool=True):
-        # List format ->   [(<layer_index> , <node_used>])]
         activations=[]
         z:list[list[float]]=[]
         x:list[list[float]]=[]
@@ -256,4 +276,4 @@ class NetworkManager():
             self.nn.forward_propagate(test_point['inputs'],expected_result)
 
 ml=NetworkManager()
-ml.train(20000, 10)
+ml.train(20000, 100)
