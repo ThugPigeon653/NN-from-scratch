@@ -148,7 +148,7 @@ class Network():
 
         self.cursor.execute('SELECT fromNodeId, toNodeId, weight FROM weights WHERE layerId=?',(layerId,))
         nodes=self.cursor.fetchall()
-        fromNodes, toNodes, weights=zip(*nodes)
+        fromNodes, _, _=zip(*nodes)
         z=self.activation_prime(self.z[layerId])
         cost_prime:[]=[0]*len(set(fromNodes))
         i=0
@@ -157,35 +157,12 @@ class Network():
             error_index=weight[1]
             this_del=self.cum_error[error_index]*z[error_index]
             cost_prime[cost_prime_index]+=this_del
-            this_del=weight[2]-(this_del*self.learning_rate)
-            self.cursor.execute(f'UPDATE weights SET weight={this_del} WHERE layerId=? AND fromNodeId=? AND toNodeId=?',(layerId, cost_prime_index, error_index))
             i+=1
+        for index in range(0,len(cost_prime)):
+            this_del=(cost_prime[index]*self.learning_rate*z[index])
+            self.cursor.execute(f'UPDATE weights SET weight-={this_del} WHERE layerId=? AND fromNodeId=? AND toNodeId=?',(layerId, cost_prime_index, error_index))
         self.conn.commit()
 
-        '''# TODO: Multiply together each ELEMENT of error_prime*input values, rather than finding dot product
-        i=len(self.z)-1
-        # last layer partial derivative: E0'*a'*x
-        # a' is 2D, and has vert correlation to input neurons, and horiz to output neurons.
-        del_activations=np.array(self.activation_prime(self.z[i])).reshape(1,-1)
-        # E' runs on axis of output neurons (horizontal)
-        error_prime=np.array(self.error_prime).reshape(-1,1)
-        # x runs on axis of input neurons (vertical)
-        input_values=np.array(self.x[i]).reshape(-1,1)
-        print(f"gradient = {error_prime.shape} * {del_activations.shape}")
-        layer_gradient:np.ndarray=error_prime.dot(del_activations)
-        print(f"delta = {layer_gradient.shape} * {input_values.shape}")
-        weight_deltas.append(layer_gradient.T.dot(input_values))
-        i-=1
-        while i>=0:
-            del_activations=np.array(self.activation_prime(self.z[i]))
-            self.cursor.execute('SELECT weight FROM weights WHERE layerId = ?',(i,))
-            weights=self.cursor.fetchall()
-            del_activations=del_activations.dot(np.array(weights))
-            print(f"del_activations: {del_activations.shape}\ngradent before: {layer_gradient.shape}\n")
-            layer_gradient=layer_gradient.dot(del_activations)
-            print(f"gradient after: {layer_gradient.shape}")
-            weight_deltas.append(layer_gradient.dot(np.vstack(np.array(self.x[i]))))0
-            i-=1'''
 
     # Classification algorithm, reducing many floats to one int 
     # NOTE: Numerous functions have been made from the previous implementation. Even though they are  only called by this function,
