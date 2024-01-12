@@ -33,6 +33,8 @@ class Network():
     def activate_prime(input:np.ndarray)->np.ndarray:
         return np.where(input < 0, 0, input)
     
+    # This method helps correctly save the cumulative inputs to every weight, across each batch. This value was not explicitly 
+    # calculated during forward propagation, but is required for gradient descent. 
     @staticmethod
     def inputs_node_to_weight(input:np.ndarray, toNodes:int)->np.ndarray:
         lin:list[np.ndarray]=[]
@@ -42,7 +44,6 @@ class Network():
             i+=1
         return np.hstack(lin)
         
-
     def forward_propagate(self, feature:list[float], result:list[float]):
         i=0
         highest_batch:int=len(self.x)
