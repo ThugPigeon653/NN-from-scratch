@@ -52,5 +52,8 @@ class DataManager():
         with open(json_file_path, 'w') as json_file:
             json.dump(train_data, json_file)
 
+    # This method only returns one single sample. The reson a list-returning method is not provided is that this single-sample
+    # approach works for any case, including batch GD. A pre-selected random batch is the same as calling a random sample each
+    # time, as long as the activations and average feature is recorded.
     def get_random_training_data_point(self)->{}:
         return self.train_data[str(random.randint(0, len(self.train_data) - 1))]
