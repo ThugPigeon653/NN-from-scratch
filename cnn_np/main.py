@@ -32,6 +32,16 @@ class Network():
     @staticmethod
     def activate_prime(input:np.ndarray)->np.ndarray:
         return np.where(input < 0, 0, input)
+    
+    @staticmethod
+    def inputs_node_to_weight(input:np.ndarray, toNodes:int)->np.ndarray:
+        lin:list[np.ndarray]=[]
+        i=0
+        while i <toNodes:
+            lin.append(input.T)
+            i+=1
+        return np.hstack(lin)
+        
 
     def forward_propagate(self, feature:list[float], result:list[float]):
         i=0
@@ -40,17 +50,15 @@ class Network():
         self.z.append([])
         propagated_value:np.ndarray=np.array(feature).reshape(1,-1)
         self.z[highest_batch].append(propagated_value.copy())
-        print(propagated_value.shape, self.weights[i].shape, propagated_value.dot(self.weights[i]).shape)
+        #print(propagated_value.shape, self.weights[i].shape, propagated_value.dot(self.weights[i]).shape)
         self.x[highest_batch].append(propagated_value.dot(self.weights[i]))
         weight_layers:int=len(self.weights)
         while i<weight_layers:
             z:np.ndarray=propagated_value.dot(self.weights[i])
             z=z+self.bias[i]
-            print(z.shape)
             z=self.normalize(z)
             self.z[highest_batch].append(z.copy())
             propagated_value=self.activate(z)
-            print(propagated_value.shape)
             self.x[highest_batch].append(propagated_value.copy())
             self.activations[i]+=propagated_value
             i+=1
@@ -61,6 +69,9 @@ class Network():
         # exactly once per batch
         avg_error=self.error/self.batch_size
         x_avg:list[np.ndarray] = [self.activate_prime(np.mean(np.array(inner_list), axis=0)) for inner_list in zip(*self.x)]
+        for i in range(0, len(self.weights)):
+            x_avg[i]=self.inputs_node_to_weight(x_avg[i], self.weights[i].shape[1])
+        print(x_avg)
         rp_z_avg:list[np.ndarray] = [self.activate_prime(np.mean(np.array(inner_list), axis=0)) for inner_list in zip(*self.z)]
         index:int=len(rp_z_avg)-2
         wd=[]
