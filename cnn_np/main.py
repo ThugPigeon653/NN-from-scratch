@@ -1,7 +1,7 @@
 import numpy as np
 
 class Network():
-    def __init__(self, input_size:int, hidden_size:int, hidden_layers:int, output_size:int, batch_size:int) -> None:
+    def __init__(self, input_size:int, hidden_size:int, hidden_layers:int, output_size:int, batch_size:int, learning_rate:float) -> None:
         self.x:list[list[np.ndarray]]=[]
         self.z:list[list[np.ndarray]]=[]
         self.activations = []
@@ -18,6 +18,9 @@ class Network():
         self.error: np.ndarray = np.zeros((batch_size, output_size))  
         self.batch_size = batch_size
         self.hidden_size=hidden_size
+        self.hidden_layers=hidden_layers
+        self.learning_rate=learning_rate
+        self.output_size=output_size
 
     @staticmethod
     def normalize(input:np.ndarray)->np.ndarray:
@@ -50,7 +53,6 @@ class Network():
         self.x.append([])
         self.z.append([])
         propagated_value:np.ndarray=np.array(feature).reshape(1,-1)
-        print(propagated_value)
         self.x[highest_batch].append(propagated_value.copy())
         #print(propagated_value.shape, self.weights[i].shape, propagated_value.dot(self.weights[i]).shape)
         self.z[highest_batch].append(propagated_value.dot(self.weights[i]))
@@ -64,44 +66,52 @@ class Network():
             self.x[highest_batch].append(propagated_value.copy())
             self.activations[i]+=propagated_value
             i+=1
-        self.error+=(propagated_value-np.array(result))
+        self.error+=(np.array(result)-propagated_value)
+        print(self.error==propagated_value, propagated_value==0)
+        #print(np.array(result)-propagated_value, self.error)
 
-    def backward_propagate(self):
-        # average out the cumulative scores for z, x, e, etc. This is done in backprop method, because botrh actions happen 
-        # exactly once per batch
-        avg_error=self.error/self.batch_size
+    def backward_propagate(self, iteration):
+        # average out cumulative values, before starting backprop process
+        avg_error:np.ndarray=(self.error/self.batch_size).T
+        avg_error_scalar:float=avg_error[0,0]-avg_error[1,0]
+        self.error: np.ndarray = np.zeros((self.batch_size, self.output_size))
+        print(f"Iteration: {iteration}  Cost: {avg_error_scalar**2}\n")
+        wd:list[np.ndarray]=[]
+        bd:list[float]=[]
         x_avg:list[np.ndarray] = [np.mean(np.array(inner_list), axis=0) for inner_list in zip(*self.x)]
-        print(len(x_avg))
-        for i in range(0, len(x_avg)):
-            print(x_avg[i].shape)
-        #    #x_avg[i]=self.inputs_node_to_weight(x_avg[i], self.weights[i].shape[1])
-        rp_z_avg:list[np.ndarray] = [self.activate_prime(np.mean(np.array(inner_list), axis=0)) for inner_list in zip(*self.z)]
-        index:int=len(rp_z_avg)-2
-        wd=[]
-        # find all layer gradients
-        
+        self.x=[]
+        top_index:int=len(x_avg)-1
+        current_index:int=1
+        wd.append(np.outer(avg_error, x_avg[top_index-current_index]).T)
+        # hidden layers
+        k=avg_error.T
+        for _ in range(0, self.hidden_layers):
+            bd.append(avg_error_scalar)
+            k=self.activate_prime(np.dot(wd[current_index-1], k.T).T)
+            wd.append(np.outer(k, x_avg[top_index-current_index-1]).T)
+            current_index+=1
+        for w in range(0, len(wd)):
+            self.weights[w]+=self.learning_rate*wd[len(wd)-1-w]
+            #print(wd[len(wd)-1-w])
 
-        '''print(avg_error.shape, rp_z_avg[index+1].shape, x_avg[index+1].shape)
-        dels=avg_error*rp_z_avg[index+1]
-        wd.append(dels*x_avg[index+1])
-        print(dels.shape)
-        index-=1
-        dels=dels*self.weights[index+1]
-        print(dels.shape, rp_z_avg[index+1].shape, x_avg[index+1].shape)
-        dels=dels*rp_z_avg[index+1]
-        wd.append(dels*x_avg[index+1])
-        print(wd[1])
+n=Network(4, 32, 4 , 2, 1, 1)
 
-        dels=avg_error.T.dot(rp_z_avg[index]).T
-        wd.append(dels*x_avg[index])
-        index-=1    
-        print(dels.shape)
-        while index>=0:
-            #print(f"dels= d{dels.shape} x z{rp_z_avg[index].shape} x w{self.weights[index].shape} x{x_avg[index].shape}")
-            index-=1'''
-
-n=Network(4, 8, 4 , 2, 1)
-n.forward_propagate([1,7,3,4], [1,0])
-n.forward_propagate([1,2,3,9], [1,0])
-n.forward_propagate([1,2,3,4], [1,0])
-n.backward_propagate()
+i=0
+while i<10000:
+    n.forward_propagate([1,7,3,5], [0.9,0.14])
+    n.forward_propagate([1,2,8,9], [1,0.1])
+    n.forward_propagate([1,6,3,4], [1,0.8])
+    n.forward_propagate([1,7,2,4], [1,0.6])
+    n.forward_propagate([1,2,3,9], [1,0])
+    n.forward_propagate([1,2,3,4], [1,0])
+    n.forward_propagate([1,7,3,4], [1,0])
+    n.forward_propagate([1,2,3,9], [1,0])
+    n.forward_propagate([1,2,3,4], [0.7,0.8])
+    n.forward_propagate([1,7,3,4], [1,0])
+    n.forward_propagate([1,2,3,9], [1,0])
+    n.forward_propagate([1,2,3,4], [1,0])
+    n.forward_propagate([1,7,3,4], [1,0])
+    n.forward_propagate([1,2,3,9], [1,0])
+    n.forward_propagate([1,2,3,4], [1,0])
+    n.backward_propagate(i)
+    i+=1
