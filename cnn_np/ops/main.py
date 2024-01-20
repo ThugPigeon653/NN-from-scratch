@@ -10,19 +10,14 @@ class Op():
 
 class SigOp():
     @staticmethod
-    def forward_propagate(context:{}, inputs:np.ndarray):
+    def forward_propagate(context:{}, inputs:np.ndarray)->np.ndarray:
         def sigmoid_outer(power:float):
             return 1/(1+(math.e**(-power)))
-        inputs=np.vectorize(sigmoid_outer)(inputs)
+        return np.vectorize(sigmoid_outer)(inputs)
 
     def backward_propagate(self, context:{}, inputs:np.ndarray):
         forward=self.forward_propagate(context, inputs)
-        return forward*(np.ones_like(shape=inputs.shape))
+        print(forward*(1-forward))
+        return forward*(1-forward)
 
-class PlusOp():
-    def forward_propagate(context:{}, a, b):
-        return a+b
-    
-    def backward_propagate(context, output):
-        return output, output
-SigOp().forward_propagate({}, np.array([[0.1,0.2,0.3],[0.4,0.5,0.6]]))
+print(SigOp().backward_propagate({}, np.array([[-0.9,-0.6,-0.3],[-0.1,0,0.1],[0.3,0.6,0.9]])))
