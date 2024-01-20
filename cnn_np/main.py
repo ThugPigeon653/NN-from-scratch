@@ -92,9 +92,17 @@ class Network():
             current_index+=1
         for w in range(0, len(wd)):
             self.weights[w]+=self.learning_rate*wd[len(wd)-1-w]
+            self.bias[w]+=self.learning_rate*bd[len(bd)-1-w]
             #print(wd[len(wd)-1-w])
+        print(avg_error)
 
-n=Network(4, 32, 4 , 2, 1, 1)
+n=Network(
+    input_size=4, 
+    hidden_size=32, 
+    hidden_layers=4, 
+    output_size=2, 
+    batch_size=1, 
+    learning_rate=1)
 
 i=0
 while i<10000:
