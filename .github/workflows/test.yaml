@@ -21,4 +21,6 @@ jobs:
             pip install numpy
 
     - name: tests
-      run: python -m unittest 02_cnn_np_ops/test_02.py
+      run: |
+            cd 02_cnn_np_ops
+            python -m unittest test_02.py
