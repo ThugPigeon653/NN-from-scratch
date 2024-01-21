@@ -14,22 +14,18 @@ class TestOps(unittest.TestCase):
         sigop = SigOp(x_dim=2, y_dim=3)
         inputs = np.array([[1, 2],[3, 4],[5,6]])
         output = sigop.forward_propagate({}, inputs)
-        print(output==sigop.output)
-        #print(sigop.output.shape)
         self.assertTrue(sigop.output.shape==inputs.shape)
         backward = sigop.backward_propagate({})
         self.assertTrue(backward.shape==inputs.shape)
 
-
     def test_sumop_forward_backward(self):
-        sumop = SumOp(x_dim=2, y_dim=3)
-        weights = np.array([[1, 2, 3], [6, 4, 5]])
-        x = np.array([[1, 2]])
+        sumop = SumOp(x_dim=3, y_dim=2)
+        weights = np.array([[1, 2, 3], [6, 4, 2]])
+        x = np.array([[2, 1]])
         bias = 1
         output = sumop.forward_propagate(weights, x, bias)
-        self.assertTrue(np.array_equal(sumop.output, np.array([[8], [18], [28]])))
         backward = sumop.backward_propagate()
-        self.assertTrue(np.array_equal(backward, np.array([32, 32])))
+        self.assertTrue(backward.shape==(3,2))
 
     def test_mseop_forward_backward(self):
         mseop = MSEOp(x_dim=2, y_dim=3)

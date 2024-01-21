@@ -52,22 +52,16 @@ class SumOp(Op):
 
     def forward_propagate(self, weights:np.ndarray, x:np.ndarray, bias:float):
         self.increment_count()
-        print('----------')
         output=x.dot(weights)+bias
-        print(x.shape, weights.shape)
-        print(output.shape)
         if(self.weights==None):
             self.weights=weights
         else:
             self.weights+=weights
-        print('[][][]')
-        print(output.shape)
-        print(self.output.shape)
         self.output+=output
         return output
     
     def backward_propagate(self):
-        return self.weights.dot(self.output)
+        return self.weights.T
 
 class MSEOp(Op):
     def forward_propagate(self, context:{}, inputs:np.ndarray, expected:np.ndarray):
@@ -77,4 +71,3 @@ class MSEOp(Op):
     
     def backward_propagate(self):
         return np.sum(self.output)
-#print(SigOp().backward_propagate({}, np.array([[-0.9,-0.6,-0.3],[-0.1,0,0.1],[0.3,0.6,0.9]]))
