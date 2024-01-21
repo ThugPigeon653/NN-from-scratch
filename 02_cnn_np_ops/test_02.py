@@ -1,7 +1,10 @@
 import unittest
 import numpy as np
 import math
+import sys
+import os
 from main import Op, SigOp, SumOp, MSEOp
+
 
 class TestOps(unittest.TestCase):
 
