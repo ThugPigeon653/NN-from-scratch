@@ -67,7 +67,7 @@ class Network():
             self.activations[i]+=propagated_value
             i+=1
         self.error+=(np.array(result)-propagated_value)
-        print(self.error==propagated_value, propagated_value==0)
+        #print(self.error==propagated_value, propagated_value==0)
         #print(np.array(result)-propagated_value, self.error)
 
     def backward_propagate(self, iteration):
@@ -75,7 +75,7 @@ class Network():
         avg_error:np.ndarray=(self.error/self.batch_size).T
         avg_error_scalar:float=avg_error[0,0]-avg_error[1,0]
         self.error: np.ndarray = np.zeros((self.batch_size, self.output_size))
-        print(f"Iteration: {iteration}  Cost: {avg_error_scalar**2}\n")
+        #print(f"Iteration: {iteration}  Cost: {avg_error_scalar**2}\n")
         wd:list[np.ndarray]=[]
         bd:list[float]=[]
         x_avg:list[np.ndarray] = [np.mean(np.array(inner_list), axis=0) for inner_list in zip(*self.x)]
@@ -92,9 +92,17 @@ class Network():
             current_index+=1
         for w in range(0, len(wd)):
             self.weights[w]+=self.learning_rate*wd[len(wd)-1-w]
+            self.bias[w]+=self.learning_rate*bd[len(bd)-1-w]
             #print(wd[len(wd)-1-w])
+        print(avg_error)
 
-n=Network(4, 32, 4 , 2, 1, 1)
+n=Network(
+    input_size=4, 
+    hidden_size=32, 
+    hidden_layers=4, 
+    output_size=2, 
+    batch_size=1, 
+    learning_rate=1)
 
 i=0
 while i<10000:
