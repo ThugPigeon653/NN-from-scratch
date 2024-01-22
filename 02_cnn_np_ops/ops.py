@@ -33,7 +33,7 @@ class SigOp(Op):
         self.output+=inputs
         return inputs
 
-    def backward_propagate(self, context:{}):
+    def backward_propagate(self, context:{}={}):
         self.k=self.k/self.batch_size_count
         forward=self.forward_propagate(context, self.k)
         return forward*(1-forward)

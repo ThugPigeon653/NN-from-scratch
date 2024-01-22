@@ -2,14 +2,17 @@
 # A list of Ops ensures that whatever happens in the forward pass will always
 # be mirror in the backward pass. Each op contains the foward and backward 
 # operations required for that OpNode. 
-# The idea of OpNodes comes from Peter Bloems work 
+# The idea of OpNodes comes from Peter Bloems suggestions on machine learning. 
 import ops
 import numpy as np
-
 
 feature_size=2
 hidden_size=4
 output_size=3
+
+alpha:float=0.05
+b1:float=0
+b2:float=0
 
 model:list[ops.Op]=[]
 weights:list[np.ndarray]=[]
@@ -33,12 +36,24 @@ for i in range(0, c):
 feature:np.ndarray=np.array([[0.1, 0.8]])
 expected:np.ndarray=np.array([[0, 0.9, 0]])
 a=model[0].forward_propagate({},feature)
-b=model[1].forward_propagate({}, weights[0], a, 0)
+b=model[1].forward_propagate({}, weights[0], a, b1)
 c=model[2].forward_propagate({}, b)
-d=model[3].forward_propagate({}, weights[1], c, 0)
+d=model[3].forward_propagate({}, weights[1], c, b2)
 e=model[4].forward_propagate({}, d)
 Loss=model[5].forward_propagate({}, e, expected)
-
-# NOTE: The following line of code shows the forward pass as a single nested function. This is identical to the above approach in practice. 
+# NOTE: The following (commented-out) line of code shows the forward pass as a single nested function. This is identical to the above approach in practice. 
 #Loss=model[5].forward_propagate({}, model[4].forward_propagate({}, model[3].forward_propagate({}, weights[1], model[2].forward_propagate({}, model[1].forward_propagate({}, weights[0], model[0].forward_propagate({},feature), 0)), 0)), expected)
 print(f"MSE Loss: {Loss}\n")
+
+# backward prop
+bp=model[5].backward_propagate()*model[4].backward_propagate()
+b_nabla=sum(bp)
+w_nabla=np.outer(bp, model[2].output).T
+weights[1]-=alpha*w_nabla
+b2-=alpha*b_nabla
+
+bp=bp.dot(weights[1].T)*model[2].backward_propagate()
+b_nabla=sum(bp)
+w_nabla=np.outer(bp, model[0].output).T
+weights[0]-=alpha*w_nabla
+b1-=b_nabla
