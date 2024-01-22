@@ -1,7 +1,10 @@
 import unittest
 import numpy as np
 import math
-from main import Op, SigOp, SumOp, MSEOp
+import sys
+import os
+from ops import Op, SigOp, SumOp, MSEOp
+
 
 class TestOps(unittest.TestCase):
 
@@ -23,7 +26,7 @@ class TestOps(unittest.TestCase):
         weights = np.array([[1, 2, 3], [6, 4, 2]])
         x = np.array([[2, 1]])
         bias = 1
-        output = sumop.forward_propagate(weights, x, bias)
+        output = sumop.forward_propagate({}, weights, x, bias)
         backward = sumop.backward_propagate()
         self.assertTrue(backward.shape==(3,2))
 

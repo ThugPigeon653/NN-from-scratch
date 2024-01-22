@@ -1,0 +1,26 @@
+name: testQL Tests
+on:
+  push:
+    branches:
+    - '*'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v2
+
+    - name: Setup py installation
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.x
+
+    - name: Install dependencies
+      run: |
+            python -m pip install --upgrade pip
+            pip install numpy
+
+    - name: tests
+      run: |
+            cd 02_cnn_np_ops
+            python -m unittest test_02.py
