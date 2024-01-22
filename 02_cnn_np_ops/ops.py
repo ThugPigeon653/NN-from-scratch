@@ -36,6 +36,7 @@ class SigOp(Op):
     def backward_propagate(self, context:{}={}):
         self.k=self.k/self.batch_size_count
         forward=self.forward_propagate(context, self.k)
+        self.output=np.zeros(shape=self.output.shape)
         return forward*(1-forward)
 
 class SumOp(Op):
@@ -61,7 +62,10 @@ class SumOp(Op):
         return output
     
     def backward_propagate(self):
-        return self.weights.T
+        bp=self.weights.T
+        self.output=np.zeros(shape=self.output.shape)
+        return bp
+        
 
 class MSEOp(Op):
     def forward_propagate(self, context:{}, inputs:np.ndarray, expected:np.ndarray)->float:
@@ -70,4 +74,6 @@ class MSEOp(Op):
         return np.sum((self.output**2)/2)
     
     def backward_propagate(self):
-        return np.sum(self.output)
+        bp=np.sum(self.output)
+        self.output=np.zeros(shape=self.output.shape)
+        return bp
