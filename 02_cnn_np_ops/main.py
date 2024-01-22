@@ -41,11 +41,17 @@ c=model[2].forward_propagate({}, b)
 d=model[3].forward_propagate({}, weights[1], c, b2)
 e=model[4].forward_propagate({}, d)
 Loss=model[5].forward_propagate({}, e, expected)
-# NOTE: The following (commented-out) line of code shows the forward pass as a single nested function. This is identical to the above approach in practice. 
+# NOTE: The following (commented-out) line of code shows the forward pass as a 
+# single nested function. This is identical to the above approach in practice. 
+# Loss=f(x)=0.5(sig(xW+b))^2
 #Loss=model[5].forward_propagate({}, model[4].forward_propagate({}, model[3].forward_propagate({}, weights[1], model[2].forward_propagate({}, model[1].forward_propagate({}, weights[0], model[0].forward_propagate({},feature), 0)), 0)), expected)
 print(f"MSE Loss: {Loss}\n")
 
-# backward prop
+# backward prop. 
+# 'bp' just stands for back-propagated. This is the vector of dk^i/dL^i. 
+# Saving this value before computing nabla's not only saves a duplicate 
+# computation, but actually saves ^2 computations per layer added to the 
+# computation graph.
 bp=model[5].backward_propagate()*model[4].backward_propagate()
 b_nabla=sum(bp)
 w_nabla=np.outer(bp, model[2].output).T
