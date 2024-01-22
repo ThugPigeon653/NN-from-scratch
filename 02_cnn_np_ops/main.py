@@ -1,4 +1,8 @@
-# Hacky example implementation of ops.py. Proves simplicity of taking this approach.
+# example implementation of ops.py. Proves simplicity of taking this approach.
+# A list of Ops ensures that whatever happens in the forward pass will always
+# be mirror in the backward pass. Each op contains the foward and backward 
+# operations required for that OpNode. 
+# The idea of OpNodes comes from Peter Bloems work 
 import ops
 import numpy as np
 
@@ -35,5 +39,6 @@ d=model[3].forward_propagate({}, weights[1], c, 0)
 e=model[4].forward_propagate({}, d)
 Loss=model[5].forward_propagate({}, e, expected)
 
-print(Loss)
-#L:float=model[5].forward_propagate({},model[4].forward_propagate({},model[3].forward_propagate({},model[2].forward_propagate({},model[1].forward_propagate({},model[0].forward_propagate({},feature), weights[0])), weights[1])), expected)
+# NOTE: The following line of code shows the forward pass as a single nested function. This is identical to the above approach in practice. 
+#Loss=model[5].forward_propagate({}, model[4].forward_propagate({}, model[3].forward_propagate({}, weights[1], model[2].forward_propagate({}, model[1].forward_propagate({}, weights[0], model[0].forward_propagate({},feature), 0)), 0)), expected)
+print(f"MSE Loss: {Loss}\n")

@@ -65,7 +65,6 @@ class SumOp(Op):
 
 class MSEOp(Op):
     def forward_propagate(self, context:{}, inputs:np.ndarray, expected:np.ndarray)->float:
-        print(inputs.shape, expected.shape)
         self.increment_count()
         self.output=expected-inputs
         return np.sum((self.output**2)/2)
