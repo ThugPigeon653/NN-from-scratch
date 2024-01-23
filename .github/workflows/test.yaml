@@ -24,30 +24,3 @@ jobs:
       run: |
             cd 02_cnn_np_ops
             python -m unittest test_02.py
-
-  make-pr:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v2
-        if: github.actor == 'ThugPigeon653'
-
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
-        with:
-          commit-message: Auto PR
-          title: Automated PR
-          body: Created by a development branch
-          branch: main
-        if: github.actor == 'ThugPigeon653'
-          
-      - name: Merge Pull Request
-        uses: peter-evans/create-pull-request@v5
-        with:
-          commit-message: Merge PR
-          title: Merge Pull Request
-          body: This PR was automatically merged.
-          branch: main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: github.actor == 'ThugPigeon653'
