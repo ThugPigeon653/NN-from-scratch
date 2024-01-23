@@ -32,34 +32,76 @@ for i in range(0, c):
     if i%2==0:
         weights.append(np.random.uniform(-1.000, 1.000, size=(model[i].output.shape[1], model[i+1].output.shape[1])))
 
+# NOTE: This loop has been set up to feed in one training example repeatedly. This
+# is not typically useful, but serves to prove that the model will approach truth.
+# Because the model averages saved outputs across the forward-iteration count,
+# it can be fed batches, and will automatically average and clear saved outputs as
+# needed (see ops.p)
 # forward prop
-feature:np.ndarray=np.array([[0.1, 0.8]])
-expected:np.ndarray=np.array([[0, 0.9, 0]])
-a=model[0].forward_propagate({},feature)
-b=model[1].forward_propagate({}, weights[0], a, b1)
-c=model[2].forward_propagate({}, b)
-d=model[3].forward_propagate({}, weights[1], c, b2)
-e=model[4].forward_propagate({}, d)
-Loss=model[5].forward_propagate({}, e, expected)
-# NOTE: The following (commented-out) line of code shows the forward pass as a 
-# single nested function. This is identical to the above approach in practice. 
-# Loss=f(x)=0.5(sig(xW+b))^2
-#Loss=model[5].forward_propagate({}, model[4].forward_propagate({}, model[3].forward_propagate({}, weights[1], model[2].forward_propagate({}, model[1].forward_propagate({}, weights[0], model[0].forward_propagate({},feature), 0)), 0)), expected)
-print(f"MSE Loss: {Loss}\n")
+for i in range(0,100):
+    feature:np.ndarray=np.array([[0.1, 0.8]])
+    expected:np.ndarray=np.array([[0, 0.9, 0]])
+    a=model[0].forward_propagate({},feature)
+    b=model[1].forward_propagate({}, weights[0], a, b1)
+    c=model[2].forward_propagate({}, b)
+    d=model[3].forward_propagate({}, weights[1], c, b2)
+    e=model[4].forward_propagate({}, d)
+    Loss=model[5].forward_propagate({}, e, expected)
+    # NOTE: The following (commented-out) line of code shows the forward pass as a 
+    # single nested function. This is identical to the above approach in practice. 
+    # Loss=f(x)=0.5(sig(xW+b))^2
+    #Loss=model[5].forward_propagate({}, model[4].forward_propagate({}, model[3].forward_propagate({}, weights[1], model[2].forward_propagate({}, model[1].forward_propagate({}, weights[0], model[0].forward_propagate({},feature), 0)), 0)), expected)
+    print(f"MSE Loss: {Loss}\n")
 
-# backward prop. 
-# 'bp' just stands for back-propagated. This is the vector of dk^i/dL^i. 
-# Saving this value before computing nabla's not only saves a duplicate 
-# computation, but actually saves ^2 computations per layer added to the 
-# computation graph.
-bp=model[5].backward_propagate()*model[4].backward_propagate()
-b_nabla=sum(bp)
-w_nabla=np.outer(bp, model[2].output).T
-weights[1]-=alpha*w_nabla
-b2-=alpha*b_nabla
+    # backward prop. 
+    # 'bp' just stands for back-propagated. This is the vector of dk^i/dL^i. 
+    # Saving this value before computing nabla's not only saves a duplicate 
+    # computation, but actually saves ^2 computations per layer added to the 
+    # computation graph.
+    bp=model[5].backward_propagate()*model[4].backward_propagate()
+    b2_nabla=np.sum(bp)
+    w2_nabla=np.outer(bp, model[2].output).T
 
-bp=bp.dot(weights[1].T)*model[2].backward_propagate()
-b_nabla=sum(bp)
-w_nabla=np.outer(bp, model[0].output).T
-weights[0]-=alpha*w_nabla
-b1-=b_nabla
+    bp=bp.dot(weights[1].T)*model[2].backward_propagate()
+    b_nabla=np.sum(bp)
+    w_nabla=np.outer(bp, model[0].output).T
+
+    # apply nabla's
+    weights[0]-=alpha*w_nabla
+    b1-=alpha*b_nabla
+    weights[1]-=alpha*w2_nabla
+    b2-=alpha*b2_nabla
+'''for i in range(0,100000):
+    # forward prop
+    feature:np.ndarray=np.array([[0.1, 0.8]])
+    expected:np.ndarray=np.array([[0, 0.9, 0]])
+    a=model[0].forward_propagate({},feature)
+    b=model[1].forward_propagate({}, weights[0], a, b1)
+    c=model[2].forward_propagate({}, b)
+    d=model[3].forward_propagate({}, weights[1], c, b2)
+    e=model[4].forward_propagate({}, d)
+    Loss=model[5].forward_propagate({}, e, expected)
+    # NOTE: The following (commented-out) line of code shows the forward pass as a 
+    # single nested function. This is identical to the above approach in practice. 
+    # Loss=f(x)=0.5(sig(xW+b))^2
+    #Loss=model[5].forward_propagate({}, model[4].forward_propagate({}, model[3].forward_propagate({}, weights[1], model[2].forward_propagate({}, model[1].forward_propagate({}, weights[0], model[0].forward_propagate({},feature), 0)), 0)), expected)
+    if(i%50==0):
+        print(f"MSE Loss: {Loss}\n")
+
+    # backward prop. 
+    # 'bp' just stands for back-propagated. This is the vector of dk^i/dL^i. 
+    # Saving this value before computing nabla's not only saves a duplicate 
+    # computation, but actually saves ^2 computations per layer added to the 
+    # computation graph.
+    bp=model[5].backward_propagate()*model[4].backward_propagate()
+    b_nabla=sum(bp)
+    print(model[0].output)
+    w_nabla=np.outer(bp, model[2].output).T
+    weights[1]-=alpha*w_nabla
+    b2-=alpha*b_nabla
+
+    bp=bp.dot(weights[1].T)*model[2].backward_propagate()
+    b_nabla=sum(bp)
+    w_nabla=np.outer(bp, model[0].output).T
+    weights[0]-=alpha*w_nabla
+    b1-=b_nabla'''

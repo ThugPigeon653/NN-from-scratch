@@ -28,6 +28,10 @@ class SigOp(Op):
         else:
             self.k+=inputs
         def sigmoid_outer(power:float):
+            if power > 0:
+                power=min(power, 700)
+            else:
+                power=max(-700, power)
             return 1/(1+(math.e**(-power)))
         inputs=np.vectorize(sigmoid_outer)(inputs)
         self.output+=inputs
@@ -37,6 +41,7 @@ class SigOp(Op):
         self.k=self.k/self.batch_size_count
         forward=self.forward_propagate(context, self.k)
         self.output=np.zeros(shape=self.output.shape)
+        self.batch_size_count=0
         return forward*(1-forward)
 
 class SumOp(Op):
@@ -54,7 +59,7 @@ class SumOp(Op):
     def forward_propagate(self, context:{}, weights:np.ndarray, x:np.ndarray, bias:float):
         self.increment_count()
         output=x.dot(weights)+bias
-        if(self.weights==None):
+        if(self.weights is None):
             self.weights=weights
         else:
             self.weights+=weights
@@ -64,6 +69,7 @@ class SumOp(Op):
     def backward_propagate(self):
         bp=self.weights.T
         self.output=np.zeros(shape=self.output.shape)
+        self.batch_size_count=0
         return bp
         
 
@@ -76,4 +82,5 @@ class MSEOp(Op):
     def backward_propagate(self):
         bp=np.sum(self.output)
         self.output=np.zeros(shape=self.output.shape)
+        self.batch_size_count=0
         return bp
