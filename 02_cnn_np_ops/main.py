@@ -2,9 +2,10 @@
 # A list of Ops ensures that whatever happens in the forward pass will always
 # be mirror in the backward pass. Each op contains the foward and backward 
 # operations required for that OpNode. 
-# The idea of OpNodes comes from Peter Bloems suggestions on machine learning. 
+# The idea of OpNodes comes from Peter Bloem's suggestions on machine learning. 
 import ops
 import numpy as np
+import json
 
 feature_size=2
 hidden_size=4
@@ -40,7 +41,10 @@ for i in range(0, c):
 # it can be fed batches, and will automatically average and clear saved outputs as
 # needed (see ops.p)
 # forward prop
-for i in range(0,600000):
+
+json_content:{}={}     
+
+for i in range(0,600):
     feature:np.ndarray=np.array([[0.1, 0.8]])
     expected:np.ndarray=np.array([[0, 0.9, 0]])
     a=model[0].forward_propagate({},feature)
@@ -56,7 +60,7 @@ for i in range(0,600000):
     print(f"MSE Loss: {Loss}\n")
 
     # backward prop. 
-    # 'bp' just stands for back-propagated. This is the vector of dk^i/dL^i. 
+    # 'bp' just stands for back-propagated. This is the vector of dk^i/dL. 
     # Saving this value before computing nabla's not only saves a duplicate 
     # computation, but actually saves ^2 computations per layer added to the 
     # computation graph.
@@ -74,6 +78,11 @@ for i in range(0,600000):
     weights[1]+=alpha*w2_nabla
     b2+=alpha*b2_nabla
 
-    # normalize weights
+    # normalize weights. this helps to prevent exploding gradient, by keeping
+    # -1<weight<1.
     weights[0] /= np.max([1.0, np.max(np.abs(weights[0])) / (1.0 + epsilon)])
     weights[1] /= np.max([1.0, np.max(np.abs(weights[1])) / (1.0 + epsilon)])
+    json_content[i] = {"H0": a.tolist(), "k1": b.tolist(), "H1": c.tolist(), "k2": d.tolist(), "H2": e.tolist(), "L": Loss.tolist(), "W0":weights[0].tolist(), "W1":weights[1].tolist()}
+    
+    with(open("output.json", "w") as file):
+        json.dump(json_content, file, indent=4)
