@@ -9,6 +9,10 @@ class RNN():
     def softmax(input_arr:np.ndarray)->np.ndarray:
         exp_x = np.exp(input_arr - np.max(input_arr)) 
         return exp_x / np.sum(exp_x, axis=0)
+    
+    def softmax_prime(self, input_arr: np.ndarray) -> np.ndarray:
+        s: np.ndarray = self.softmax(input_arr)
+        return np.diagflat(s) - np.outer(s, s)
 
     def __init__(self, chars) -> None:
         self.x_argmax:int=len(chars)
@@ -23,11 +27,24 @@ class RNN():
             # Encode one-hot
             x:np.ndarray=np.zeros(shape=(self.x_argmax, 1))
             char=char.lower()
-            hot_index=int(np.where(charset==char)[0][0])
+            hot_index:int=int(np.where(charset==char)[0][0])
             x[hot_index][0]=1
-            self.h=np.tanh(x.dot(self.u)+(self.h.dot(self.v)))
-            z=self.h.dot(self.w)
-            y=self.softmax(z)
+            self.h:np.ndarray=np.tanh(x.dot(self.u)+(self.h.dot(self.v)))
+            z:np.ndarray=self.h.dot(self.w)
+            y:np.ndarray=self.softmax(z)
+            print((y).shape)
+
+            
+            dy_dw = self.h.T.dot(self.softmax_prime(z))
+            dy_dv = self.h.T.dot(self.softmax_prime(z)).dot(self.u.T)
+            dy_du = x.T.dot(self.v).dot(self.softmax_prime(z)) * (1 - self.h**2)
+
+
+
+
+            print(self.w.shape, dy_dw.shape)
+            print(self.v.shape, dy_dv.shape)
+            print(self.u.shape, dy_du.shape)
             print(charset[np.argmax(y)][0])
 
 # sample usage
