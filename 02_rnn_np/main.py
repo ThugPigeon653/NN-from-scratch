@@ -9,7 +9,7 @@
 import numpy as np
 
 class RNN():
-    learning_rate:float=0.0000000000001
+    learning_rate:float=0.00000001
     @staticmethod
     def softmax(input_arr:np.ndarray)->np.ndarray:
         exp_x = np.exp(input_arr - np.max(input_arr)) 
@@ -23,7 +23,7 @@ class RNN():
         self.u:np.ndarray=np.random.uniform(-1.000, 1.000, size=(1,self.x_argmax))
         self.v:np.ndarray=np.random.uniform(-1.000, 1.000, size=(self.x_argmax,self.x_argmax))
         self.w:np.ndarray=np.random.uniform(-1.000, 1.000, size=(self.x_argmax,1))
-        self.h:np.ndarray=np.zeros(shape=(self.x_argmax, self.x_argmax))
+        self.h:np.ndarray=np.random.uniform(-1.000, 1.000, size=(self.x_argmax, self.x_argmax))
 
     @staticmethod
     def loss_prime(input_arr:np.ndarray, predicted_value:np.ndarray)->np.ndarray:
@@ -34,6 +34,7 @@ class RNN():
         y:np.ndarray=None
         a:np.ndarray
         i=0
+        learning_rate:float=self.learning_rate/(epochs*len(feature))
         while i<epochs:    
             for char in feature:
                 # Encode one-hot
@@ -50,20 +51,20 @@ class RNN():
                     dc_dh=self.v
                     dh_da=np.ones(shape=(self.h.shape))-np.square(np.tanh(self.h.dot(self.v)))
                     da_du=x
-                    u_nabla=(dl_dy*dy_dc).T.dot(dc_dh)
-                    da_dz=1
+                    u_nabla=(dl_dy*dy_dc).T.dot(dc_dh).dot(dh_da)*(da_du.T)
+                    # da_dz=1
                     dz_dw=self.h
-                    w_nabla=(dl_dy*dy_dc).T.dot(dh_da).dot(dz_dw).T
-                    self.u-=u_nabla*self.learning_rate
-                    self.w-=w_nabla*self.learning_rate
-                    self.v-=v_nabla*self.learning_rate
+                    w_nabla=(dl_dy*dy_dc).T.dot(dc_dh).dot(dh_da).dot(dz_dw).T
+                    self.u-=u_nabla*learning_rate
+                    self.w-=w_nabla*learning_rate
+                    self.v-=v_nabla*learning_rate
                 a=x.dot(self.u)+(self.h.dot(self.v))
                 self.h:np.ndarray=np.tanh(a)
                 z:np.ndarray=self.h.dot(self.w)
                 y=self.softmax(z)
                 i+=1
 
-    def make_prediction(self, prediction_length:int, start_seed:str=""):
+    def make_prediction(self, prediction_length:int, output_file_index:int, start_seed:str=""):
         if start_seed==None or start_seed=="":
             start_seed="The words here dont really matter, they just provide a small sample of text."
         y:np.ndarray=None
@@ -92,7 +93,8 @@ class RNN():
             output+=charset[np.argmax(y)][0]
             if len(output)%80==0:
                 output+='\n'
-        with open("output.txt", "w") as file:
+        output+='\n'+output
+        with open(f"output_{output_file_index}.txt", "w") as file:
             file.write(output)
 
 # sample usage
@@ -126,5 +128,10 @@ for char in feature:
 feature=cleaned_feature
 
 model=RNN(charset)
-model.forward_propagate(feature, 3000)
-model.make_prediction(1000)
+i=0
+iterations=20
+model.learning_rate/=iterations
+while i<20:
+    model.forward_propagate(feature, 1)
+    model.make_prediction(1000, i)
+    i+=1
