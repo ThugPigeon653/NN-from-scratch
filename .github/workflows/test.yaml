@@ -24,3 +24,5 @@ jobs:
       run: |
             cd 02_cnn_np_ops
             python -m unittest test_02.py
+            cd ../03_rnn_np
+            python -m unittest test_03.py
