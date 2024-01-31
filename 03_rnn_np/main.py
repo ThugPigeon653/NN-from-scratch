@@ -7,7 +7,7 @@
 # and number of epochs. 
 
 import numpy as np
-import sys
+import random
 
 charset:np.ndarray = np.array([
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
@@ -52,10 +52,10 @@ class RNN():
         y:np.ndarray=None
         z:np.ndarray=None
         c:np.ndarray=None
-        old_x:np.ndarray
+        old_x:np.ndarray=np.zeros(shape=(1,self.x_index))
         dL_dy:np.ndarray=np.zeros(shape=(1,self.x_index))
         count=0
-        summation:np.ndarray=np.zeros(shape=(1, self.x_index))
+        s=0
         for char in feature:
                 # Encode one-hot
                 x:np.ndarray=np.zeros(shape=(1, self.x_index))
@@ -65,33 +65,26 @@ class RNN():
                 # loss performed after discovering the correct next feature. This is
                 # effectively calculating retrospective loss of previous iteration. 
                 if y is not None: 
-                    L=self.loss(x,y)
-                    dL_dy=self.loss_prime(x,y)
-                    dy_dc=self.softmax_prime(c)
-                    dc_dh=self.v.T
-                    dc_dh0:np.ndarray=self.w.T
-                    i=0
-                    while i<count:
-                        dc_dh0=dc_dh0.dot(dc_dh0)
-                        i+=1
-                    dh_du=old_x
-                    summation+=(dL_dy*dy_dc).dot(dc_dh).dot(dc_dh0)
-                    
-                    dL_dv=np.outer(dL_dy, h)
-                    dL_du=np.outer(dh_du, summation)
-                    dL_dw=np.outer(z, summation)
+                    dL_du=np.outer((x-y).dot(self.v.T),dh_du)
+                    dL_dw=np.outer((x-y).dot(self.v.T),dh_dw)
+                    dL_dv=np.outer((x-y),(h))
 
-                    print(dL_dw)
-                    
-                    
+                    self.u-=dL_du*self.learning_rate
+                    self.w-=dL_dw*self.learning_rate
+                    self.v-=dL_dv*self.learning_rate
+
+                    s+=np.sum(self.loss(x,y))
                 a=x.dot(self.u)
                 z=h.dot(self.w)
                 b=z+a
                 h=np.tanh(b)
+                dh_du=(1-h)*(x+(old_x.dot(self.u.T)))
+                dh_dw=(1-h)*(x+(h.dot(self.w.T)))
                 c=h.dot(self.v)
                 y=self.softmax(c)
                 old_x=x
                 count+=1
+        print(s/len(feature))
 
 
     def make_prediction(self, prediction_length:int, output_file_index:int, start_seed:str=""):
@@ -155,10 +148,14 @@ def sample_implementation():
 
     model=RNN()
     i=0
-    iterations=20
-    while i<20:
-        model.forward_propagate(feature, 1)
-        model.make_prediction(3000, i)
+    iterations=2000
+    seq_len:int=40
+    while i<iterations:
+        j=random.randint(0,len(feature)-seq_len)
+        sub_feature:str=feature[j:j+seq_len]
+        model.forward_propagate(sub_feature, 1)
+        if i%(iterations/10)==0:
+            model.make_prediction(3000, i)
         i+=1
 
 sample_implementation()
