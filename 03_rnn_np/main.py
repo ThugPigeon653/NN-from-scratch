@@ -37,8 +37,12 @@ class RNN():
         #self.h:np.ndarray=np.random.uniform(-1.000, 1.000, size=(self.x_index, self.x_index))
 
     @staticmethod
+    def loss(input_arr:np.ndarray, predicted_value:np.ndarray)->np.ndarray:
+        return 0.5*(input_arr-predicted_value)**2
+
+    @staticmethod
     def loss_prime(input_arr:np.ndarray, predicted_value:np.ndarray)->np.ndarray:
-        return input_arr/np.where(predicted_value == 0, 1e-10, predicted_value)
+        return input_arr-predicted_value
 
     def forward_propagate(self, feature:str, epochs:int):
         # Forward propagate
@@ -49,6 +53,9 @@ class RNN():
         z:np.ndarray=None
         c:np.ndarray=None
         old_x:np.ndarray
+        dL_dy:np.ndarray=np.zeros(shape=(1,self.x_index))
+        count=0
+        summation:np.ndarray=np.zeros(shape=(1, self.x_index))
         for char in feature:
                 # Encode one-hot
                 x:np.ndarray=np.zeros(shape=(1, self.x_index))
@@ -58,27 +65,24 @@ class RNN():
                 # loss performed after discovering the correct next feature. This is
                 # effectively calculating retrospective loss of previous iteration. 
                 if y is not None: 
-                    L=(x*-1)*np.log(y)
-                    dL_dy=(-1*x)/y
+                    L=self.loss(x,y)
+                    dL_dy=self.loss_prime(x,y)
                     dy_dc=self.softmax_prime(c)
-                    dc_dv=h
-                    dc_dh=self.v
-                    dh_db=np.square(np.ones(shape=(b.shape))/np.cosh(b))
-                    # db_dz=db_da=1 // this is left as comment, to remind that this
-                    # partial derivative has a gradient of 1 - so does not need to 
-                    # accounted for
-                    da_du=old_x
-                    da_dw=h
+                    dc_dh=self.v.T
+                    dc_dh0:np.ndarray=self.w.T
+                    i=0
+                    while i<count:
+                        dc_dh0=dc_dh0.dot(dc_dh0)
+                        i+=1
+                    dh_du=old_x
+                    summation+=(dL_dy*dy_dc).dot(dc_dh).dot(dc_dh0)
+                    
+                    dL_dv=np.outer(dL_dy, h)
+                    dL_du=np.outer(dh_du, summation)
+                    dL_dw=np.outer(z, summation)
 
-                    dL_db=(dL_dy*dy_dc).dot(dc_dh.T)*dh_db
-
-                    dL_du=np.outer(dL_db, da_du).T
-                    dL_dw=np.outer(dL_db, da_dw).T
-                    dL_dv=np.outer((dL_dy*dy_dc),(dc_dv)).T
-
-                    self.u-=dL_du*self.learning_rate
-                    self.v-=dL_dv*self.learning_rate
-                    self.w-=dL_dw*self.learning_rate
+                    print(dL_dw)
+                    
                     
                 a=x.dot(self.u)
                 z=h.dot(self.w)
@@ -87,52 +91,8 @@ class RNN():
                 c=h.dot(self.v)
                 y=self.softmax(c)
                 old_x=x
+                count+=1
 
-
-
-
-    '''def forward_propagate(self, feature:str, epochs:int):
-        # Forward propagate
-        y:np.ndarray=None
-        a:np.ndarray
-        i=0
-        learning_rate:float=self.learning_rate/(epochs*len(feature))
-        while i<epochs:    
-            for char in feature:
-                # Encode one-hot
-                x:np.ndarray=np.zeros(shape=(self.x_index, 1))
-                char=char.lower()
-                hot_index:int=int(np.where(charset==char)[0][0])
-                x[hot_index][0]=1
-                # BPTT is handled for each forward layer
-                if y is not None:
-                    dl_dy:np.ndarray=self.loss_prime(y,x)
-                    dy_dc:np.ndarray=self.softmax_prime(y)
-                    dc_dv:np.ndarray=self.h
-                    vb_nabla=(dl_dy*dy_dc).T
-                    v_nabla=vb_nabla.dot(dc_dv)
-                    dc_dh=self.v
-                    dh_da=np.ones(shape=(self.h.shape))-np.square(np.tanh(self.h.dot(self.v)))
-                    da_du=x
-                    ub_nabla=(dl_dy*dy_dc).T.dot(dc_dh).dot(dh_da)
-                    u_nabla=ub_nabla*(da_du.T)
-                    # da_dz=1
-                    dz_dw=self.h
-                    wb_nabla=(dl_dy*dy_dc).T.dot(dc_dh).dot(dh_da)
-                    w_nabla=wb_nabla.dot(dz_dw).T
-                    wb_nabla=wb_nabla.T
-                    self.u-=u_nabla*learning_rate
-                    self.w-=w_nabla*learning_rate
-                    self.v-=v_nabla*learning_rate
-
-                    self.bias[0]-=np.sum(ub_nabla)*learning_rate
-                    self.bias[1]-=np.sum(vb_nabla)*learning_rate
-                    self.bias[2]-=np.sum(wb_nabla)*learning_rate
-                a=(x.dot(self.u)+self.bias[0])+(self.h.dot(self.v)+self.bias[1])
-                self.h:np.ndarray=np.tanh(a)
-                z:np.ndarray=self.h.dot(self.w)+self.bias[2]
-                y=self.softmax(z)
-                i+=1'''
 
     def make_prediction(self, prediction_length:int, output_file_index:int, start_seed:str=""):
         if start_seed==None or start_seed=="":
@@ -165,7 +125,7 @@ class RNN():
             c=h.dot(self.v)
             y=self.softmax(c)
             output+=str(charset[np.argmax(y)][0])
-            print(np.argmax(y), str(charset[np.argmax(y)][0]))
+            #print(np.argmax(y), str(charset[np.argmax(y)][0]))
             if len(output)%80==0:
                 output+='\n'
         with open(f"output_{output_file_index}.txt", "w") as file:
@@ -200,3 +160,5 @@ def sample_implementation():
         model.forward_propagate(feature, 1)
         model.make_prediction(3000, i)
         i+=1
+
+sample_implementation()
